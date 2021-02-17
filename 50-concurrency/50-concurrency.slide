@@ -1,0 +1,376 @@
+Go: concurrency
+Jan Herout
+
+* goroutine
+
+* 
+
+Go runtime umožňuje funkce spouštět paralelně. Existuje pro to speciální termín, _goroutine_.
+
+Funkce, které jsou takto na pozadí spuštěné, nemohou přímo vrátit žádnou hodnotu.
+
+	// spustí funkci work na pozadí
+	go work()
+
+* 
+
+Naivní přístup:
+
+.play go1.go /START/,/END/
+
+Jak je vidět, je nutné řešit nějak synchronizaci. A kromě toho je nutné mít možnost z 
+_goroutine_ nějak dostat ven data (a nějspíš jí i nějaká data předat).
+
+* channel
+
+*
+
+- `channel` je datový typ, který umožňuje komunikaci mezi běžícími rutinami. 
+- `channel` je inicializován hodnotou `nil`, a stejně jako v případě `slice` 
+  je jeho intance vytvářena pomocí klíčového slova `make`
+
+    var c chan int          // deklarace
+    c = make(chan int)      // vytvočení instance kanálu
+     
+`channel` může být buď bez bufferu, nebo s bufferem.
+
+    c:= make(chan bool)     // unbuffered
+    c:= make(chan bool, 1)  // buffered, kapacita je 1 prvek typu bool
+
+čtení a zápis
+
+    e := <- c               // načti z kanálu c jeden prvek, a ulož ho do e
+    c <- e                  // zapiš do kanálu c prvek e
+
+* 
+
+Pokud je *unbuffered*, zápis a/nebo čtení je vždy *blokující* operace. Co to znamená:
+
+- aby se podařilo do kanálu data *zaslat*, musí je někdo chtít *číst*
+- aby se podařilo z kanálu data *číst*, musí je tam někdo *zaslat*
+
+Unbuffered channel tak vlastně implementuje "handshake", obě strany se musí potkat, a předat si data.
+
+Pokud je *buffered*, kanál má definovanou kapacitu. 
+
+- dokud kapacita není vyčerpána, zápis je _neblokující_ operace
+- pokud je kapacita vyčerpána, zápis se změní v blokující operaci
+- pokud v kanálu jsou nějaká data, čtení je _neblokující_ operace
+- pokud v kanálu žádná data nejsou, čtení se mění v _blokující_ operaci
+
+* unbuffered channel
+
+* synchronizace a předání dat
+
+.play go2-unbuffered.go /START/,/END/
+
+* 
+
+Pokud není program správně navržen, může se stát, že žádná goroutina nemůže pokračovat v běhu.
+
+Pokud se program do tohoto stavu dostane, go runtime zpanikaří - což je asi lepší, 
+než kdyby zůstal viset.
+
+* deadlock
+
+.play go3-unbuffered.go /START/,/END/
+
+* read only channel, write only channel
+
+Kanál je možné deklarovat jako "read only", tj kompilátor mi zakáže do něj zaslat data,
+ale je možné ho deklarovat jako "write only", tj kompilátor mi zakáže z něj číst.
+
+Je to další stupeň ochrany před chybou. Pokud chci kanál použít pro jednosměrnou komunikaci
+(což je typický scénář), proč to kompilátoru neříci?
+
+    var readOnly <- chan string         // pokus o zápis na tento kanál selže
+    var writeOnly chan <- string        // pokus o čtení z kanálu selže
+
+* range, close
+
+Předchozí příklady všechny počítaly s tím, že přes channel vždy proteče jen jedna položka. 
+
+Co když ale chci channel použít jako "rouru", a posílat do něj - například - záznamy, 
+které chci zpracovat? Jak poznám, že už není co zpracovávat?
+    
+    // načítej z kanálu položky, dokud není uzavřen
+    func worker(aChannel <- chan string) {
+        // range skončí v okamžiku, kdy z kanálu již není co číst
+        for e := range aChannel { 
+            // do something on the element e
+        }
+    }
+    
+    // ... a někde jinde ...
+    aChannel <- "řádek 1"               // pošli položku ke zpracování
+    close(aChannel)                     // uzavři kanál
+
+*
+
+.play go4-ranging.go /START/,/END/
+
+* cvičení 1
+
+*
+
+Napište následující funkci:
+    
+    // split and send splits the input string by space, 
+    // and sends each work to the channel.
+    func splitAndSend(s string) <- chan string
+    
+.play cviko1.go /START/,/END/
+
+* unbuffered channel a select
+
+Snadno může nastat situace, kdy gorutina může přijímat data z různých kanálů.
+V takové situaci není možné "tupě" číst jen jeden z nich, protože je to blokující operace;
+je potřeba reagovat na první položku, která přijde.
+
+K tomu slouží klíčové slovo `select`.
+
+    // A "select" statement chooses which of a set of possible send or receive operations 
+    // will proceed. It looks similar to a "switch" statement but with the cases all 
+    // referring to communication operations.
+
+Select tedy umožňuje vydat se první cestou, která není blokující - ať už jde o čtení,
+nebo zápis.
+
+Select může obsahovat také sekci `default` - ta se aktivuje *vždy*, pokud nemůže
+běžet jiný `case` k dispozici. Z tohoto důvodu se s unbuffered kanály moc nepoužívá.
+
+*
+
+.play go6-select.go /START/,/END/
+
+* Summary příkladu
+
+Toto je select, který čeká na dostupnost dat z jednoho, nebo z druhého kanálu.
+
+    select {
+        case work, more := <- c:
+            fmt.Printf("máme vstup [%s]\n", work)
+        case <- time.Tick(time.Second):
+            fmt.Println("tick...")              
+    }                                                
+
+* Summary příkladu
+
+Při čtení dat z kanálu můžeme použít formu o dvou parametrech. 
+
+    work, more := <- c
+    if !more { break loop }
+    
+Čtení se podaří, pokud:
+
+- kanál obsahuje data - načteme je do proměnné `work`, a `more` má hodnotu true
+- kanál byl uzavřen - v takovém případě je `work` nastaven na nulovou hodnotu, a `more` je false.
+
+.image fan-out.jpg
+
+* closed channels
+
+- číst kanál, který byl uzavřen, je *validní* situace (jak demostroval předchozí příklad)
+- psát na kanál, který byl uzavřen, vede na `panic`
+
+.play go7-read-closed.go /START/,/END/
+
+
+* buffered channels
+
+
+V principu platí to, co jsme psali o _unbuffered_ kanálech. Rozdíl je v tom, kdy je read/write operace blokující.
+
+.image buffered.png
+
+* sync.WaitGroup
+
+*
+
+Mějme skupinu _worker_ procesů, kterým trvá odbavení jejich práce různě dlouho.
+Worker procesy produkují data.
+
+Mějme jeden _reader_ proces, který tato data následně zpracovává.
+Reader konzumuje data.
+
+    // worker1 --|write|--> +--------------+
+    //                      |              |
+    // worker2 --|write|--> |   channel    | --|read|--> reader
+    //                      |              |
+    // worker3 --|write|--> +--------------+
+                            
+Jde tedy o situaci, kdy `N` gorutin produkuje data, která konzumuje právě `1` gorutina.
+
+*
+
+Protoře o sobě navzájem worker procesy *nemohou* vědět, a *nemůžou* vědět
+který z nich je poslední, nemohou signalizovat své dokončení uzavřením 
+výstupního kanálu.
+
+*Jak* *to* *implementovat*?
+
+.link https://golang.org/pkg/sync/#WaitGroup
+
+*
+
+Worker procesy zapisují na kanál, který je poskutnut nadřazenou funkcí.
+Mohl by to být parametr, v našem případě je to closure.
+
+
+	var wg sync.WaitGroup
+	work := make(chan int, maxCnt)
+
+	writer := func(i int) {
+		// wg.Add()           // VYPADÁ TO LOGICKY, ALE BYLA BY TO CHYBA!
+		sleep(i)              // čeká náhodně dlouho; simulace
+		work <- i             // odeslání výsledku
+		wg.Done()             // signalizuje dokončení práce
+	}
+    
+*NOTE*: všimněte si chybějícího wg.Add(1)
+
+* 
+
+Protože worker procesy *nemohou* z definice uzavřít výstupní kanál,
+musí se o to postarat nějaký jiný proces. Musí jít o proces, který 
+pozná, že skupina workerů skončila - a to pomocí wg.Wait()
+
+	closer := func() {
+		wg.Wait()
+		close(work)
+	}
+    
+V našem případě jde o gorutinu, která bude odstartována z rutiny `main`.
+
+* 
+
+Mějme potom právě jednoho odběratele. Protože jde pouze o jednoho
+odběratele, je signalizace jeho konce pomocí sync.WaitGroup tak trochu 
+"overkill" - vystačíme si s jednoduchým unbuffered kanálem.
+
+	readerDone := make(chan struct{})         // signalizační kanál
+	reader := func() {
+		for i := range work {                 // načti data
+			fmt.Println("received", i)
+		}
+		close(readerDone)                     // končíme
+	}
+
+Reader bude číst data z vstupního kanálu, a signalizuje svůj konec.
+
+*
+
+Doposud jsme nespustili žádné zpracování, pouze jsme deklarovali komponenty.
+
+.play go8-sync-wg.go /START/,/END/
+
+*POZOR!* Je potřeba si _pečlivě_ přečíst dokumentaci.
+
+    // A WaitGroup waits for a collection of goroutines to finish.
+    // The ***MAIN GOROUTINE*** calls Add to set the number of
+    // goroutines to wait for. 
+    // A WaitGroup ***must not be copied*** after first use.
+    type WaitGroup struct 
+    
+Proč?
+
+*
+
+Pokud by wg.Add() byl součástí funkce `writer`, stávalo by se (náhodně!), že:
+
+    - `main` pospouští všechny gorutiny
+    - pořadí jejich spuštění *není* garantované
+    - naběhne `closer`, zjistí, že ještě na `wg` nic zaregistrováno, protože 
+      neběžel žádný writer
+    - `closer` zavře výstupní kanál
+    - `reader` se ukončí a signalizuje konec
+    - `main` detekuje signál `done` a celý program skončí
+
+Žádný `writer` se nedostane ke slovu - nebo se ke slovu dostane, a zapíše na zavřený kanál (panic).
+
+.play go9-sync-wg.go /START/,/END/
+
+* Plný listing
+
+.link https://goplay.space/#C24ZTDKXZQm
+
+* data race
+
+*
+
+.play go11-race.go /START/,/END/
+
+* Tohle se také může stát
+
+fatal error: concurrent map writes
+
+    // goroutine 7 [running]:
+    // runtime.throw(0x9110a8, 0x15)
+    //     C:/Program Files/Go/src/runtime/panic.go:1117 +0x79 fp=0xc00004df58 sp=0xc00004df28 pc=0x876359
+    // runtime.mapassign_fast64(0x8f7dc0, 0xc0001003c0, 0x0, 0x0)
+    //     C:/Program Files/Go/src/runtime/map_fast64.go:101 +0x34b fp=0xc00004df98 sp=0xc00004df58 pc=0x85168b
+    // main.main.func2(0xc000018088, 0xc0001003c0, 0xc0000180a0)
+    //     C:/Users/janhe/AppData/Local/Temp/present-885653745/prog.go:24 +0x53 fp=0xc00004dfc8 sp=0xc00004df98 pc=0x8e81d3
+    // runtime.goexit()
+
+Jak řešit situaci, kdy několik gorutin potřebuje mít exkluzivní zámek nad sdíleným zdrojem?
+
+.link https://golang.org/pkg/sync/#Mutex
+.link https://golang.org/pkg/sync/#RWMutex
+
+* cvičení 2
+
+* 
+    // ErrGroup is an error group which is safe for concurrent writes.
+    type ErrGroup struct // contains unexported fields    
+    
+    // NewErrGroup return a new error group.
+    func NewErrGroup() *ErrGroup
+    
+    // Append adds an error to the group.
+    func (e *ErrGroup) Append(err error)
+    
+    // Errors returns a new slice, which contains slice of errors encountered so far.
+    // If no errors were encountered, returns nil.
+    func (e *ErrGroup) Errors() []error
+    
+    // Error implementes the error interface
+    func (e *ErrGroup) Error() string
+    
+.play cviko2.go /START/,/END/
+
+Na dalším slajdu jsou stavební prvky.
+
+* Stavební prvky
+
+.link https://golang.org/pkg/sync/#Mutex
+    
+    mu.Lock()
+    mu.Unlock()
+
+.link https://golang.org/pkg/fmt/#Sprintf
+
+    s := fmt.Sprintf("Total #%d errors:\n", __nějaké__číslo__)
+    s := fmt.Sprintf(" * %s\n", err)
+
+.link https://golang.org/pkg/strings/#Builder
+
+    var sb strings.Builder
+    sb.WriteString(fmt.Sprintf("Total #%d errors:\n", len(e.es)))
+    return sb.String()
+
+* Cvičení 2 - tip
+
+Proč zakládáme pro datový typ konstruktor?
+
+    // NewErrGroup return a new error group.
+    func NewErrGroup() *ErrGroup
+    
+Protože asi nejdůležitější funkce, Error(), má pointer interface.
+Tohle by tedy nefungovalo tak, jak chceme:
+   
+.play cviko2-bug.go /START/,/END/
+
+To znamená, že interface `error` implementuje `*ErrGroup`, ne `ErrGroup`
+
+Proto musíme vrátit *pointer*, a proto je vhodné připravit konstruktor.

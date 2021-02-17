@@ -1,0 +1,197 @@
+Go: interface
+Jan Herout
+
+* interface jako kontrakt
+
+* 
+
+`interface` je datový typ, který specifikuje sadu metod, která musí být naimplementovaná.
+Je to vlastně kontrakt. 
+
+V jazyce Go je interface uspokojen *implicitně*.
+
+Příklad funkce která akceptuje interface - z balíčku `io`.
+    
+    // ReadAll reads from r until an error or EOF and returns the data it read.
+    func ReadAll(r Reader) ([]byte, error)
+
+Do funkce lze předat *cokoliv*, co *implicitně* vyhoví kontraktu `Reader`.
+
+Proměnná typu `interface` je inicializovaná hodnotou `nil`.
+
+* 
+
+Takhle vypadá deklarace toho, co je `Reader`.
+
+    // Reader is the interface that wraps the basic Read method.
+    // Read reads up to len(p) bytes into p. It returns ...
+    type Reader interface {
+        Read(p []byte) (n int, err error)
+    }
+    
+Reader je cokoliv, co implementuje metodu...
+
+    Read(p []byte) (n int, err error)
+    
+Současně s tím se očekává, že implementace vyhoví dalším podnímkám, které jsou
+specifikovány v popisu rozhraní `Reader`.
+
+.link https://golang.org/pkg/io/#Reader
+
+Může to být například: soubor, buffer, socket, .....
+
+.link https://golang.org/pkg/bytes/#Buffer.Read
+
+* polymorfismus
+
+Metoda, která *akceptuje* jako vstup `interface`, deklaruje vlastně způsob použití
+vstupního parametru.
+
+Například: pokud jako vstup akceptuji io.Reader, deklaruji tím, že z daného vstupu budu
+pouze *číst*, nic jiného s ním dělat nebudu. Současně nepotřebuji o vstupním parametru
+vlastně nic jiného vědět - můj záměr je pouze použít jeho metodu `Read`.
+
+* kompozice
+
+Interfaces lze do sebe skládat, a tím popisovat komplexnější celky.
+
+Například:
+    
+    // Reader is the interface that wraps the basic Read method.
+    type Reader interface {
+        Read(p []byte) (n int, err error)
+    }
+    
+    // Closer is the interface that wraps the basic Close method.
+    type Closer interface {
+        Close() error
+    }
+    
+    // ReadCloser is the interface that groups the basic Read and Close methods.
+    type ReadCloser interface {
+        Reader
+        Closer
+    }
+
+* často používané interfaces
+
+`error`: tenhle interface najdete doslova *všude*
+
+.link https://golang.org/ref/spec#Errors
+
+`Stringer`: určuje, jak se má (koplexní) datový typ "tisknout" pomocí funkcí z balíčku `fmt`.
+
+.link https://pkg.go.dev/fmt#Stringer
+
+`Reader`, `Writer`, `Closer`: určuje, jak číst/psát data, a jak po sobě uklidit.
+
+.link https://pkg.go.dev/io#Reader
+.link https://pkg.go.dev/io#Writer
+.link https://pkg.go.dev/io#Closer
+
+* příklad komplexního interface
+
+Interface z knihovny, která je abstrakcí souborového systému.
+
+.link https://pkg.go.dev/github.com/spf13/afero#Fs
+
+    The bigger the interface, the weaker the abstraction.
+    
+Užitečnost rozhraní *klesá* s jeho komplexitou, protože je čím dál složitější
+daný kontrakt pokrýt. Navíc, v některých implementacích to ani nemusí být možné.
+
+Například: interface popsaný výše popisuje implementaci souborového systému.
+Co když ale můj záměr je mít k dispozici souborový systém, který je read-only?
+
+V takové situaci nedává smysl implementovat metody jako je `Mkdir`, nebo `Remove`.
+
+* empty interface
+
+*
+
+Prázdné rozhraní je validní datový typ. Proměnná tohoto typu *nic* neříká o tom,
+jaké metody podporuje, neříká *nic* o tom, co s ní můžete dělat.
+
+        var whatever interface{}
+        whatever = "nějaký string"
+
+Protože ale o sobě prázdný interface nic neříká ...
+
+.play empty1.go /START/,/END/
+
+Prázdný interface může obsahovat cokoliv, ale nemůžete s ním dělat nic.
+
+Nebo ano?
+
+*
+
+Například
+
+    // Errorf formats according to a format specifier and returns the string 
+    // as a value that satisfies error.
+    func Errorf(format string, a ...interface{}) error
+    
+V jazyce Go totiž existuje *reflection*, a *type* *assertion*, což jsou techniky,
+které umožňují "prozkoumat" datový typ dané proměnné.
+
+* type assertion
+
+* 
+
+    // proměnná whatever se "castuje" na "typ"; vrací se proměnná daného typu, a true/false 
+    assertAs, success := whatever.(typ)
+
+Konkrétně:
+
+.play assert1.go /START/,/END/
+
+* interface jako pointer
+
+*
+
+Na pozadí si proměnnou typu `interface` můžete představit jako strukturu o dvou částech.
+
+    // TYPE : určuje, jakého konkrétního typu je hodnota uložená v této proměnné
+    // PTR  : POINTER na konkrétní instanci typu TYPE
+
+Když deklarujete proměmnnou typu interface (například error), inicializuje se takto:
+    
+    // r.TYPE = nil - o konkrétním typu nevím nic
+    // r.PTR  = nil - nemám na co "ukázat", nemám žádnou hodnotu na vstupu
+    var r io.Reader
+
+Například: do proměnné typu io.Reader můžu přiřadit pointer na buffer.
+
+.link https://pkg.go.dev/bytes#Buffer
+
+    var b bytes.Buffer
+    r = b    
+    //    ............        nebo    
+    var bp *bytes.Buffer
+    r = bp
+
+* a to je past!
+
+*
+
+.play as-pointer.go /START/,/END/
+
+*
+
+Je *velmi* těžké korektně detekovat nil pointer v proměnné interface.
+
+*HINT:* pokud na proměnnou typu `interface` přiřazujete pointer, buďte *velmi* opatrní.
+
+* best practices
+
+    Accept interfaces, return concrete types.
+    
+Pokud vím, že potřebuji načíst data ze souboru, a implementuji funkci která to dělá,
+je lepší akceptovat io.Reader spíš než os.File (filehandle).
+
+Můžu díky tomu obsah načíst z bufferu, ze stringu, z čehokoliv co poskytuje metodu Read.
+
+    The bigger the interface, the weaker the abstraction.
+    
+Interface by měl obsahovat pouze to, co je nezbytně nutné. Nic víc.
+

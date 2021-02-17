@@ -1,0 +1,329 @@
+Go, proměnné, literály a datové typy
+Jan Herout
+
+* Deklarace proměnné
+
+Proměnnou lze deklarovat pomocí klíčového slova *var*.
+
+    var s, s2 string    // s je název proměnné, string je datový typ
+
+Proměnnou je možné takto "deklarovat" pouze jednou.
+    
+Dá se použít zkrácený zápis, kdy dojde k odvození datového typu z hodnoty vpravo.
+
+    s := "nějaký text"              // s je název proměnné, datový typ je string
+    i := 0                          // integer
+    p := &Person{name:"John Doe"}   // struct pointer
+
+
+
+* Konstanty
+
+Klíčové slovo `const`. Deklarace je možné slučovat (viz níže), je vhodné slučovat
+spolu věci, které spolu souvisí.
+
+    const (
+        Pi = 3.14
+        aFloat float64 = 1.0         
+    )
+    
+    const World = "cruel world"
+
+* Konstanty - iota
+
+Go postrádá klíčové slovo `enum`, a/nebo enumeraci jako datový typ. 
+V rámci definice konstan však lze možné deklarovat sekvenci, a každé
+konstaně přidělit číslo z dané sekvence.
+
+    const (
+        statusRunning = iota + 1    // statusRunning  = 1
+        statusCanceled              // statusCanceled = 2
+        statusFinished              // statusFinished = 3
+    )
+    
+    const (
+        errNotFound = iota          // errNotFound = 0
+        errNotImplemented
+        errNotKnown
+    )
+
+* Exported vs unexported names
+
+Symboly (funkce, proměnné, a konstanty) v balíčku jsou běžně dostupné 
+pouze danému balíčku (nejsou exportované, nelze na ně přistoupit zvenku).
+
+Pokud chcete, aby byl daný symbol *exportovaný*, jeho název musí začínat
+velkým písmenem.
+
+    package thingy
+    
+    var thing int = 0               // fmt.Println(thingy.thing) z jiného balíčku selže
+    var Thing int = 10              // fmt.Println(thingy.Thing) z jiného balíčku je OK
+
+    func notAccessible() {}         // thingy.notAccessible() nelze
+    func Accessible(thing int) {}   // thingy.Accessible(1) je OK
+
+Viz například `fmt.Println` - jde o funkci exportovanou z balíčku `fmt`.
+
+* Jmenná konvence (best practices)
+
+- snakeCase nebo CamelCase
+- nedoporučuje se používat podtržítka
+- krátké, deskriptivní názvy
+
+Takhle prosím ne...
+
+    // https://spring.io/
+    //    SimpleBeanFactoryAwareAspectInstanceFactory        
+    //    AbstractSingletonProxyFactoryBean
+
+.link https://wiki.c2.com/?BadVariableNames
+
+* Použití proměnné
+
+Pokud kompilátor zjistí, že deklarujete proměnnou, kterou nepoužíváte,
+kompilace havaruje. Kompilátor se vás tím snaží chránít před chybou.
+
+.play usage.go
+
+Existuje speciální proměnná, do které lze přiřadit cokoliv, a přiřazení
+nemá žádný efekt (_blank_ _variable_). Efektivně tím kompilátoru říkáte 
+"s výsledkem pracuji, ale je mi jedno co to je."
+
+.play usagecorrected.go
+
+* Inicializace a scope
+
+* C++
+
+    // An uninitialized variable is a variable that has not been given a value 
+    // by the program (generally through initialization or assignment). 
+    // Using the value stored in an uninitialized variable will result in undefined behavior.
+
+* Go
+
+Při *deklaraci* proměnné se v závislosti na datovém typu přiřadí 
+proměnné _zero_ _value_ daného datového typu.
+
+.play zero_val.go /start/,/end/
+
+* Scope
+
+Proměnnou lze deklarovat na úrovní balíčku. Taková proměnná je *globální*
+proměnnou z pohledu daného balíčku, a je dostupná všem funkcím, které balíček
+obsahuje.
+
+	package main
+	import "fmt"	
+	var version string = "1.0.0"
+
+Proměnnou lze deklarovat také uvnitř bloku (funkce, cyklus, ...). Taková 
+proměnná má platnost *pouze* v rámci daného bloku (a jeho "potomků"), 
+za jeho koncem platnost proměnné končí.
+    
+    func main(){
+        x := 0          // platí pro celou funkci main
+        if x > 0 {
+            i := 1      // platí/existuje pouze v rámci if bloku
+                        // compile error, i je nepoužitá proměnná
+        }
+        fmt.Println(i)  // compile error, i je mimo tento scope
+    }
+
+
+
+* Scope
+
+Tohle je platná, a často používaná syntax. 
+Co je to *nil* si vysvětlíme později.
+
+    if err1 := os.Open(file); err1 != nil {
+        fmt.Println(err1)   // ok, proměnná err1 má platnost 
+                            // uvnitř tohoto bloku
+    }
+    fmt.Println(err1)       // compile error, tady už err1
+                            // k dispozici není
+
+.link https://golang.org/ref/spec#Declarations_and_scope
+
+* Shadowing
+
+.image box.jpeg 600 600
+
+* Shadowing
+
+Pokud v rámci bloku definujete proměnnou se stejným názvem, jaký má proměnná
+v nadřazeném scope, znemožníte si tím přístup k nadřazené proměnné.
+Tento fakt může vést k *nepříjemným* chybám.
+
+.play shadowing.go
+
+* Datové typy
+
+* Bool
+
+- Datový typ který umí hodnoty `true` a `false`
+
+.play bool.go /START/,/END/
+
+- Narozdíl od Perlu nebo C *nelze* na celočíselné číslo pohlížet jako na "pravdivou" či "nepravdivou" hodnotu.
+
+.play bool2.go /START/,/END/
+
+* Celočíselné numerické datové typy
+
+    uint        either 32 or 64 bits
+    int         same size as uint
+    
+    uint8       the set of all unsigned  8-bit integers (0 to 255)
+    uint16      the set of all unsigned 16-bit integers (0 to 65535)
+    uint32      the set of all unsigned 32-bit integers (0 to 4294967295)
+    uint64      the set of all unsigned 64-bit integers (0 to 18446744073709551615)
+    int8        the set of all signed  8-bit integers (-128 to 127)
+    int16       the set of all signed 16-bit integers (-32768 to 32767)
+    int32       the set of all signed 32-bit integers (-2147483648 to 2147483647)
+    int64       the set of all signed 64-bit integers (-9223372036854775808 to 9223372036854775807)
+    uintptr     an unsigned integer large enough to store the uninterpreted bits of a pointer value
+    complex64   the set of all complex numbers with float32 real and imaginary parts
+    complex128  the set of all complex numbers with float64 real and imaginary parts
+
+byte a rune...
+
+.link https://blog.golang.org/strings
+
+    byte        alias for uint8
+    rune        alias for int32
+
+
+* Celočíselné numerické datové typy
+
+Pozor na mezní hodnoty a přetečení datových typů.
+
+.play byte_overflow.go
+
+* Float
+
+Množina reálných čísel
+
+	float32, float64
+
+.play float.go
+
+
+
+* Matematika a dělení nulou
+
+Standardní knihovna, matematické funkce:
+
+.link https://golang.org/pkg/math/
+
+    Abs, Ceil, ...
+    Pow, Sqrt, ...
+    Remainder, Round, ...
+    Sin, Cos, ...
+    
+Dělit nulou nelze. Nebo lze?
+
+.link https://play.golang.org/p/KiMq_VdvsXB
+
+* Dělení nulou
+
+- dělení nulou je OK (NaN) v případě proměnné typu float
+- compile time error, pokud je nula literál
+- panic, pokud je nula v proměnné
+
+.link https://golang.org/pkg/math/#NaN
+
+* String, literál
+
+Uvozovky a backticks
+- uvozovky provádí interpolaci
+- backticks ne
+	
+    s1 := "řádek \n řádek"	  // dva řádky oddělené znakem LF
+    s2 := `řádek \n řádek"	  // s2 obsahuje text PŘESNĚ tak jak je vidět vlevo
+	
+    // takhle se dá zadat string na víc řádek
+	s3 := `řádek 1
+			řádek 2`
+	// Pozor na taby vs mezery (IDE jako GoLand nebo VS Code používají tab).
+
+* String
+
+    s1 := "a" + "b"             // s1 = "ab"
+    var s2                      // s2 = ""
+    var s3 = []byte('a','b')    // s3 = "ab"
+
+- immutable; interně je string pointer na byte array
+
+.play string.go /START/,/END/
+
+- uložíte do něj cokoliv
+- pozor, pokud procházíte stringem znak za znakem, dochází k sanitizaci!
+- když pracuju s textem, je zapotřebí *vědět* jak je nakódován
+
+
+* String, "byte string", sanitizace, substring
+
+.play string_byte.go 
+
+.link https://goplay.space/#L2wuaKsgkQt
+
+* String, knihovny
+
+- Join, split, trim, ...
+.link https://golang.org/pkg/strings/
+- Konverze na číslo, konverze z čísla, ...
+.link https://golang.org/pkg/strconv/
+- Kódování
+.link https://golang.org/pkg/unicode/utf8/
+
+* strings.Builder + fmt.Sprintf
+
+Pokud potřebujete sestavit dynamicky dlouhý string...
+
+.play string_builder.go
+
+* Klíčové slovo type
+
+Nový datový typ je možné deklarovat pomocí slova `type`.
+
+    // myInt is a set of integers equal to or greater then 0
+    type myInt int
+    
+Pro práci s takovým datovým typem je často nutné jej "přetypovat"
+
+    y := 10                    // tohle je int
+    var x myInt = y            // neprojde: cannot use y (type int) as type myInt in assignment
+    var x myInt = myInt(y)     // projde po přetypování
+    
+Existuje možnost založit _alias_ na datový typ. Jde vlastně jen o jiné pojmenování
+dříve existujícího datového typu.
+
+    type myInt = int           // myInt je vlastně int, není to nový datový typ
+    y := 10                    // tohle je int
+    var x myInt = y            // projde, protože myInt = int
+
+* Klíčové slovo type
+
+Nový datový typ má složení identické s bázovým datovým typem, ale *nedědí* jeho *metody*.
+
+* Další datové typy
+
+Tyto datové typy si vysvětlíme později.
+
+- array, slice
+- pointer
+- error
+- interface
+
+Teď je na čase se trochu pověnovat kontrolním strukturám, a napsat si pár řádek kódu.
+
+    // remainder
+    var s string
+    i := 0
+    b := true
+    s = "text s \t tabulátorem"
+    s = `bez interpolace, i na vác řádek`
+    
+    // scope, shadowing!

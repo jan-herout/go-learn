@@ -1,0 +1,164 @@
+Go, func - základní témata
+Jan Herout
+
+* úvodem
+
+*VZPOMEŇTE* *SI* - identifikátory, jejichž název začíná velkým písmenem, jsou 
+exportované (dostupné mimo aktuální package).
+
+*Jmenná* *konvence* - best practices:
+
+- krátké, výstižné názvy
+- nepoužíváme podtržítko
+- konvence je snakeCase (unexported) nebo TitleCase (exported)
+
+Témata *na* *jindy*:
+
+- variadické funkce
+- interface
+- closures
+
+* deklarace jednoduché funkce
+
+Funkce je v jazyce Go deklarována pomocí klíčového slova `func`.
+
+    // greetings accepts a name and returns a greetings.
+    func greetings(name string) string {        // function signature
+        return "Let's greet " + name            // function body
+    }
+    
+Funkce v jazyce Go nemusí mít žádné vstupy, a může vracet víc parametrů. 
+
+    func newPerson() (string, string) { // dovnitř: nic; ven: dva stringy
+        return "Petr", "Vonásek"
+    }
+    // ... někde dál v kódu ...
+    fName, sName := newPerson()        // musíme zpracovat dva parametry
+    _, sName      = newPerson()        // chceš-li některý parametr pominout, použij blank identifier
+
+Vstupní parametry se předávají "by value". 
+
+*Proč*: je to bezpečnější v situaci, kdy běží více rutin paralelně přes sebe.
+
+* funkce a předávání parametrů
+
+Pokud předáváte parametry do funkce "by value", můžete si s nimi dělat co chcete, 
+a nemá to žádný vliv na nadřazený scope. Každá instance funkce dostane vlastní kopii.
+
+.play byval.go /START/,/END/
+
+*Pozor*, později probereme výjimky:
+
+- Pokud předáváte *pointer* na hodnotu, změna hodnoty *ovlivní* nadřazený scope.
+- Pokud je vstupní parametr `slice`, nebo `map`, je to složitější.
+
+* funkce a pojmenované parametry
+
+Výstupní hodnoty mohou být pojmenované (deklarace proměnné v signatuře funkce).
+
+.play named_outputs.go /START/,/END/
+
+*Tip:* Go komunita tohle nerada vidí, je asi lepší to nepoužívat. Jsou ale situace 
+kdy to skoro nejde jinak (file.Close() a defered error handling).
+
+    Clear is better than clever.    
+
+    
+* value receiver
+
+Funkce v jazyce Go je možné svázat s datovým typem (receiver). 
+Stává se tím *metodou* daného datového typu, a jeho hodnota se předá "by value".
+
+Všimněte si použitého zápisu s tečkou.
+
+.play value_receiver.go /START/,/END/
+
+* 
+
+*Pointer* *receiver* nevytváří kopii daného objektu, ale kopii jeho *adresy*.
+Funkce tím pádem má možnost měnit hodnotu na adrese svého receiveru.
+
+DON'T PANIC: Problematice ukazatelů se budeme věnovat ve větším detailu později.
+
+.play pointer_receiver.go /START/,/END/
+
+* deklarace funkce jako metody
+
+Pokud alespoň jedna metoda daného datového typu má pointer receiver, je lepší, aby
+i *všechny* ostatní metody měly pointer receiver.
+
+*Proč*: dáváte tím nápovědu, že objekt tohoto typu nemusí být bezpečné kopírovat.
+
+* summary
+
+- Funkce může mít na vstupu i na výstupu více parametrů, různých datových typů.
+    
+	// Divide takes integer i and integer divisor d, and returns division
+	// result and remainder.
+	func Divide(i,d int) (int,int)
+	func Divide(i,d int) (quot, remainder int)
+	
+- Parametry jsou předávány do funkce "by value", vzniká dočasná kopie předávané
+  hodnoty, a její změna nemá vliv na nadřazený scope. 
+- *Pozor* na datové typy `map` a `slice`!
+- Funkce může být svázaná s datovým typem, instance hodnoty tohoto datového typu
+  se potom stává dalším z parametrů funkce (value receiver, pointer receiver).
+  
+	// Hire adds a Person to EmployeeList, thus changing the list.
+	func (e *EmployeeList) Hire(p Person)
+    
+* cvičení
+
+Napište program, který spočítá faktoriál 10.
+
+    func factorial(int n) int    
+
+Pravidla:
+
+    factorial(n > 0)  = součin všech kladných čísel, menších nebo rovných než n
+    factorial(n == 0) = 1
+    
+Zjednodušení - protože jsme zatím neřešili error handling.
+
+    factorial(n < 0)  = 0 (toto je odchylka od matematické definice)
+
+Časová dotace:
+
+    5-10 minut
+    
+.link https://goplay.space/
+
+* 
+
+.link https://goplay.space/#kkeoTy1I4wu
+
+.play factorial.go
+
+    
+* cvičení 2 Upravte program z předchozího příkladu tak, aby:
+
+- existoval nový datový typ nazvaný `FactInt`, odvozený od `int`
+- existovala následující funkce
+
+	// NewFactInt returns FactInt(n) for n>=0, otherwise FactInt(-n).
+	func NewFactInt(n int) FactInt
+
+- existovala metoda factorial 
+    
+	// factorial returns a factorial of n
+	func (n factInt) Factorial() FactInt    
+
+- ... a nakonec chceme provést toto:
+
+	func main() {
+		x := NewFactInt(-5)
+		fmt.Println(x.Factorial())
+	}
+
+.link https://goplay.space/#kkeoTy1I4wu kód předchozího cvičení
+
+* cvičení 2
+
+.link https://goplay.space/#_-vJ3ZMKZ95
+
+

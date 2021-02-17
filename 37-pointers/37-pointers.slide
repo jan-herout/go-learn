@@ -1,0 +1,254 @@
+Go, pointer
+Jan Herout
+
+* pointer, reference, dereference
+
+*
+
+.image pointer.jpg
+
+* 
+
+- pointer je *ukazatel* na určité místo v paměti
+- pointer se odkazuje na instanci konkrétního datového typu
+
+Deklarace:
+    
+    var pi *int            // hvězdička: pi je pointer na int
+    var ppi **int          // pointer na pointer na int (to asi potřebovat nikdy nebudete...)
+
+Zkrácený zápis - inicializace konkrétní hodnotou.
+
+    var i int
+    pi := &i        // i je pointer na int, a je inicializován adresou proměnné i
+    
+Pointer je inicializován hodnotou `nil` - je to něco jako "NULL" v relační databázi.
+
+.play co-je-nil.go /START/,/END/
+
+
+* operátory
+
+Existují dva operátory, které pracují s ukazately.
+
+- reference
+
+    var i int
+    pi := &i        // & je reference: ulož adresu paměti kde je i, a ulož ji jako pi
+
+- dereference
+
+    *pi = 10        // * je dereference: uprav hodnotu na adrese pi
+
+Nezaměňovat operátor pro dereferenci s hvězdičkou, která deklaruje pointer jako datový typ.
+
+.play deRef-vs-declare.go /START/,/END/
+    
+* adresovatelnost
+
+Dereferencovat lze pouze to, co má instanci. Tohle je tedy OK.
+
+.play ref.go /START/,/END/
+
+Tohle ale *není* OK. Literál *nemá* adresu.
+
+.play ref2.go /START/,/END/
+
+* new
+
+- Klíčové slovo `new` se používá k alokaci nového prostoru pro hodnotu daného typu.
+- `new` vrací inicializovaný pointer na daný datový typ.
+
+.play new.go /START/,/END/
+
+V praxi jsem v kódu častěji viděl inicializaci pointeru pomocí dereference, spíš než
+pomocí klíčového slova `new`. Ale je to spíš můj pocit.
+
+
+* typová kontrola a aritmetika
+
+Pointer je vždy svázaný s datovým typem, na který se odkazuje.
+
+.play safe1.go /START/,/END/
+
+Není možné porovnávat ukazatele na odlišné datové typy. Není ani možné přičítat,
+nebo odčítat adresy (pointer aritmetika), nebo bajty k adrese.
+
+.link http://www.cplusplus.com/doc/tutorial/pointers/#arithmetics pointer aritmetika v jazyce C
+
+V jazyce Go tedy neriskujete, že kvůli chybě v programu přepíšete v paměti něco, co 
+není vhodné přepsat.
+
+.link https://wdtz.org/catching-pointer-overflow-bugs.html
+
+* dereference a nil
+
+Go runtime při pokusu o dereferenci hodnoty `nil` zpanikaří.
+
+.play nil.go /START/,/END/
+
+Je to lepší než dereferencovat na náhodné místo v paměti.
+
+Na podobné chování narazíme ještě u datových typů `map` a `slice`.
+Při jejich použití ze začátku uvidíte `panic` (obávám se) docela často.
+
+*Tohle* je paradoxně OK!
+
+.play nil-receiver.go /START/,/END/
+
+Je to důsledek toho, že receiver je vlastně "parametr" dané funkce.
+
+* Proč?
+
+* k čemu to je dobré?
+
+Vzpomeňte si: hodnoty do funkcí se předávají "by value".
+
+.play pointers.go /START/,/END/
+
+* k čemu je to dobré?
+
+Do funkcí je možné předávat parametry "by reference".
+ 
+To je vhodné dělat, v jednom ze tří případů:
+
+- není bezpečné daný vstupní parametr zkopírovat (mutex, apod)
+- sice *je* bezpečné daný parametr zkopírovat, ale je to časově náročné
+- opravdu *chceme* v dané funkci vstupní parametr upravit (typicky: `struct`)
+    
+* pointer receiver vs value receiver
+
+* pointer receiver vs value receiver
+
+.play receiver.go
+
+
+* stack vs heap
+
+Value receiver
+    
+    receiver se odkládá na stack
+    dočasná platnost
+
+Pointer receiver
+    
+    receiver se odkládá na heap
+    garbage collected
+
+* stack
+
+Stack je termín, který označuje tu část paměti, kterou Go runtime podle potřeby
+"parceluje" mezi jednotlivé funkce, které spouští.
+
+    Každá spuštěná funkce má předělenou vlastní "parcelu" (`stack frame`), která je její,
+    a jen její. *Žádná* jiná funkce do ní nesmí *zapsat*, ani z ní nesmí *číst*.
+
+V okamžiku ukončení dané funkce je její "parcela" označena k likvidaci, a runtime
+její stack smí "beztrestně" recyklovat.
+
+    Alokace na stack je rychlá, a díky tomu, že `stack frame` má z definice omezenou 
+    živostnost, nemusí nad ním probíhat "garbage collection".
+
+* heap
+
+Heap je termín, který označuje tu část paměti, která je sdílená mezi všechny
+funkce v daném Go programu. Go runtime se snaží alokace na `heap` udržet v 
+rozumném rozsahu (garbage collection), aby předešel vyučerpání veškeré 
+dostupné paměti.
+
+    Když deklarujete v jazyce Go proměnnou, kompilátor se musí rozhodnout, zda ji bude
+    alokovat na `stack`, nebo na `heap`. 
+    
+    Jedním z nástrojů, který k tomu používá, je takzvaná "escape analysis" - v podstatě 
+    jde o to zjistit, zda daná hodnota je používaná v dané funkci exkluzivně 
+    (a je možné ji alokovat na stack), nebo ne.
+
+Ve stručnosti:
+
+    když na něco vytvoříte pointer, a předáváte pointer do funkce nebo z funkce ...
+    ... tak `musí` být odkazovaná hodnota alokovaná na `heap`!
+
+* jak se chová stack
+
+* stack
+    
+    //KÓD                            KURZOR           STACK
+    //------------------------------------------------------------------  
+    
+    func addPrint(a,b int) { // 
+        x := a + b           // 
+        fmt.Println(x)       // 
+    }                        // 
+                             // 
+    func main() {            // 
+        var x int            //      <============   +- main frame --------+
+        addPrint(x,1)        //                      | x, int, 0           |
+    }                        //                      +---------------------+
+    
+V okamžiku náběhu funkce `main()` se vytvoří nový `stack` `frame`, a na něj se alokují
+proměnné, které `main` deklaruje.
+
+Main deklaruje proměnnou x typu `int`.
+Go runtime alokuje nový prostor v rámci existujícího stack frame, a inicializuje ho 
+nulovou hodnotou daného typu.
+
+
+* stack
+    
+    //KÓD                            KURZOR           STACK
+    //--------------------------------------------------------------------------
+    
+    func addPrint(a,b int) { //     <============   +- addPrint frame ---- +
+        x := a + b           //                     | a, int, 0            | nový
+        fmt.Println(x)       //                     | b, int, 1            | frame
+    }                        //                     |                      |
+                             //                     +----------------------+ 
+    func main() {            // 
+        var x int            //                      +- main frame --------+
+        addPrint(x,1)        //                      | x, int, 0           |
+    }                        //                      +---------------------+
+    
+V okamžiku náběhu funkce `addPrint` se alokuje nový `stack frame`, která je "čistě
+její". Žádný jiný proces do něj nemůže zapsat.
+
+Na tento nově vzniklý stack frame se alokují dva vstupní parametry typu `int`, a
+inicializují se hodnotu předanou z funkce `main` - vytváří se tedy kopie proměnné
+x, která má jiný symbolický název, a jinou adresu v paměti.
+
+* stack
+    
+    //KÓD                            KURZOR           STACK
+    //--------------------------------------------------------------------------
+    
+    func addPrint(a,b int) { //     <============   +- addPrint frame ---- +
+        x := a + b           //                     | a, int, 0            | nový
+        fmt.Println(x)       //                     | b, int, 1            | frame
+    }                        //                     |                      |
+                             //                     +----------------------+ 
+    func main() {            // 
+        var x int            //                      +- main frame --------+
+        addPrint(x,1)        //                      | x, int, 0           |
+    }                        //                      +---------------------+
+    
+- Z tohoto důvodu *NENÍ* s danou signaturou možné z funkce `addPrint` ovlivnit
+  obsah proměnné `x` ve funkci `main`. 
+- Funkce má k dispozici pouze její *KOPII* v rámci vlastního stack frame.
+
+* stack
+    
+    //KÓD                            KURZOR           STACK
+    //--------------------------------------------------------------------------
+    
+    func addPrint(a,b int) { //                      +----------------------+            
+        x := a + b           //                      |.                     |                 
+        fmt.Println(x)       //                      |.VOLNÝ PROSTOR   .....|                      
+    }                        //     <============    |..runtime ho nenuluje.|       
+                             //                      +----------------------+ 
+    func main() {            // 
+        var x int            //                      +- main frame --------+
+        addPrint(x,1)        //                  =   | x, int, 0           |
+    }                        //                      +---------------------+
+    
+V okamžiku ukončení funkce `addPrint` Go runtime její `frame` označí jako 
+invalidní. Až bude potřeba alokovat nový frame, tento prostor se využije.
+

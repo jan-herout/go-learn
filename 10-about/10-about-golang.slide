@@ -1,0 +1,488 @@
+Go
+Jan Herout, 2021
+
+* Něco o mě
+
+* Něco o jazyce Go
+
+* 
+"Go is an open source programming language that makes it easy 
+to build simple, reliable, and efficient software."
+
+- Go je kompilovaný, staticky typovaný programovací jazyk 
+- Robert Griesemer, Rob Pike a Ken Thompson. Google, 2009
+- Inspirovaný jazykem C, primárním důvodem vzniku byla frustrace z C++
+- Multiplatformní, identický kód lze kompilovat pro Windows/Linux/...
+- *Slib* *zpětné* *kompatibility*
+
+.link https://golang.org golang
+
+    download, dokumentace, godoc (packages); a tour of Go
+
+.link https://github.com/avelino/awesome-go
+.link https://reddit.com/r/golang
+
+* Kritika jazyka C++ (subjektivní)
+
+- Pomalá kompilace
+- Nemá garbage collector, memory leaks, pointer aritmetika
+- Exceptions - extrémně zvyšují složitost kódu
+- Postrádá základní concurrency primitiva
+- Neřeší závislosti, nemá dependency management nástroje
+- Nedetekuje nepoužité proměnné ("bloat" kódu, a potenciální chyby)
+- Nepostačující standardní knihovna
+- ... a mnoho dalších
+
+Go se snaží tyto problémy řešit (po svém).
+
+
+* Co Go je a co Go není? (subjektivní)
+
+Co Go je:
+
+- jednoduchý, efektivní, produktivní programovací jazyk; backend, microservices
+- důraz na dokumentaci, TDD
+- tooling
+
+    godoc, gofmt, goimports, ....
+
+- nejlepší podpora Unicode standardu jakou znám (aktuálně jsou na verzi 13)
+
+.link https://www.tiobe.com/tiobe-index/
+
+- open source
+- *statické* *binárky* bez dalších *závislostí!* (Docker)  
+
+
+* Co Go je a co Go není? (subjektivní)
+
+Co Go je:
+
+- ve srovnání s C/C++ je to *neskutečně* produktivní jazyk
+
+
+Gotchas:
+
+- nemá tak dobrou konektivitu na databáze jako Perl/Python
+- string, sanitizace (side effects); regulární výrazy (Perl)
+- orchestrace paralelních procesů vypadá zvenku jednoduchá, ale není jednoduchá
+- "It's easier to ask forgiveness than it is to get permission"
+
+
+Srovnej: 
+
+    Python:  h = open(file)     # buď se to povede, nebo ne, a dostanu stack trace
+        
+    Go:      h, err := os.Open(file)
+             if err != nil { /* do something with the error */ }
+
+* Kritika jazyka Go (subjektivní)
+   
+- Primárně podporuje backend, omezená podpora GUI/TUI
+- Nehodí se k provozu real-time systémů (garbage collection, "stop the world")
+
+    ... a co má být?
+       
+- Nenapíšete v něm tohle (což ve skutečnosti není nevýhoda ?!)
+
+.play lines.pl /start/,/end/
+
+Srovnej:
+
+.link https://gist.github.com/jan-herout/5c2781e1528cf563185920646f287b25
+
+    ... některé úlohy prostě rychleji vyřešíte skriptovacím jazykem ...
+
+* 
+
+- Standardní knihovna se snaží poskytnout nástroje, které na Lin a Win fungují stejně, což se ne vždy daří. 
+- V principu to často není možné - odlišný přístup k řízení procesů, odlišná filozofie souborového systému, ...
+
+.link https://fasterthanli.me/articles/i-want-off-mr-golangs-wild-ride
+
+    ... eeeh, close enough ....
+
+- Kritika designu klíčových rozhraní
+
+.link https://fasterthanli.me/articles/abstracting-away-correctness
+
+    ... udělejte si vlastní názor ...
+
+* Použití na BI
+
+*
+
+    Linux, produkce: vodwhExport
+
+- export dat z Oracle
+- hash, archivace, potvrzování odběru
+
+    EDW load: govalidator
+  
+- ověření datových typů a stuktury extraktu, formátování dat, normalizace telefonního čísla
+
+    Tooling: bihelp, XML=>flat files, ... další drobnosti
+
+.play hilfe.go /START/,/END/
+
+
+*
+
+.image gopher2.png 560 600
+
+
+
+* Hello world
+
+.play hello.go
+
+* Syntax - overview
+
+.link https://golang.org/ref/spec
+
+- UTF8!
+- syntaxe podobná jazyku C, ale středník je *nepovinný*, a v kódu se zpravidla nepíše
+  (existuje snad jen jedna výjimka)
+
+
+Toto je validní syntaxe
+
+    if i < 10 { break }
+    
+Navzdory tomu existuje jeden preferovaný způsob zápisu, vynucovaný utilitou `gofmt`;
+po zažehlení kód bude vždy vypadat takto:
+
+    if i < 10 {
+        break
+    }
+
+
+
+* Syntax - whitespaces
+
+- v kódu se preferuje TAB před SPACE, a `gofmt` to vynucuje; 
+  počty mezer/tabů syntakticky nehrají roli
+- v kódu se preferuje LF před CRLF, a `gofmt` to vynucuje
+- CR sám o sobě *není* legitimním koncem řádky (Mac konvence) - což je fakt, na který
+  narazíte ještě i ve standardní knihovně při práci s textem (split textu přes řádky)
+
+* Syntax - komentáře
+
+Podporuje dvě konvence zápisu komentáře.
+
+    // single line comment
+    
+    /* multi 
+       line 
+       comment */
+
+V praxi se nejčastěji používá _single_ _line_ komentářů.
+
+Existuje poměrně striktní konvence, která diktuje zvyklosti toho, jak komentáře psát.
+Pokud tuto konvenci dodržíte, je následně možné automaticky z kódu generovat dokumentaci, která potom vypadá zhruba takto:
+
+.link https://pkg.go.dev/os
+
+Tipy a triky:
+
+
+.link https://github.com/fluhus/godoc-tricks/blob/master/doc.go
+.link https://pkg.go.dev/github.com/fluhus/godoc-tricks
+
+
+
+* Syntax - klíčová slova
+
+Minimalistický set klíčových slov.
+
+    break        default      func         interface    select
+    case         defer        go           map          struct
+    chan         else         goto         package      switch
+    const        fallthrough  if           range        type
+    continue     for          import       return       var
+
+Srovnej:
+
+.link https://en.cppreference.com/w/cpp/keyword
+
+Notable *ommissions*: tohle tam nehledejte...
+
+    C++:    try, throw, except, enum, Array<T>::Array(T arr[], int s) 
+
+Generika jsou v Go roadmapě, očekávají se zhruba někdy ve verzi 1.18 (2021?)
+
+* Syntaxe - předdefinované identifikátory
+
+    Types:
+        bool byte complex64 complex128 error float32 float64
+        int int8 int16 int32 int64 rune string
+        uint uint8 uint16 uint32 uint64 uintptr
+
+    Constants:
+        true false iota
+
+    Zero value:
+        nil
+
+Builtins
+
+    Functions:
+        append cap close complex copy delete imag len
+        make new panic print println real recover
+
+* Syntax - operátory
+
+Seznam operátorů vesměs neobsahuje nic překvapivého, až na několik výjimek, 
+které asi neznáte z jiných jazyků.
+
+    +    &     +=    &=     &&    ==    !=    (    )
+    -    |     -=    |=     ||    <     <=    [    ]
+    *    ^     *=    ^=     <-    >     >=    {    }
+    /    <<    /=    <<=    ++    =     :=    ,    ;
+    %    >>    %=    >>=    --    !     ...   .    :
+         &^          &^=
+    __________________________________________________
+         ??          ???
+
+Go specific:
+
+    <-          send/receive from channel
+    ...         slice to list; používá se pro variadické funkce
+
+Pointery:
+
+    &x      // dej mi adresu proměnné x
+    *p      // dereferencuj pointer p
+
+* Syntax - porovnání
+
+    ==    equal
+    !=    not equal
+    <     less
+    <=    less or equal
+    >     greater
+    >=    greater or equal
+
+Porovnávat lze pouze datové typy, které jsou kompatibilní. 
+Hodnota vpravo musí být přiřaditelná do hodnoty vlevo.
+
+Porovnávat *nelze* proměnné typu `map`, nebo `slice` (k tomu se dostaneme).
+Důvodem je jejich interní reprezentace (je to v podstatě datová struktura). 
+
+.link https://golang.org/pkg/reflect/#DeepEqual
+
+* Syntax - Logické operátory
+    
+    p && q      // is:  "if p then q else false"
+    p || q      // is:  "if p then true else q"
+    !p          // is:  "not p"
+
+Go implementuje "short circuit evaluation". 
+
+
+.play short_circuit.go    /start/,/end/
+    
+* Číselné literály
+
+    0b1111_1111     // binární číslo - dekadicky 255; "podtrh" je volitelný oddělovač
+    0xBadFace       // hexadecimální číslo
+    
+    1000            // jeden tisíc
+    1_000           // také jeden tisíc
+    
+
+Zatím jsem nepotřeboval ...
+
+    6.67428e-11     // float, zhruba 0.000000000006
+    1E6             // float, 1 * 10 na šestou
+    123i            // imaginární číslo 123
+
+* Konverze datových typů
+
+OK, neplést s voláním funkce.
+    
+    string('x')              // "x" of type string
+    []byte("string")         // byte slice (k tomu se dostaneme) složený z jednotlivých písmen
+    float32(0.49999999)      // 0.5 of type float32
+    float64(-1e-1000)        // 0.0 of type float64
+    MyString("foo" + "bar")  // "foobar" of type MyString
+    
+KO, tohle nefunguje! Nejde o kompatibilní datové typy.
+
+    int(1.2)                 // illegal: 1.2 cannot be represented as an int
+    string(65.0)             // illegal: 65.0 is not an integer constant
+
+.link https://golang.org/pkg/strconv/
+
+* Deklarace datových typů
+
+Nový datový typ ...
+
+    type MyString string        // deklaruje **nový** typ MyString
+    type StringAlias = string   // deklaruje **alias** datového typu string
+    
+- Definované datové typy s odlišným názvem *nikdy* nejsou shodné. 
+- Alias datového typu je shodný se svou bází (je to jen jiný název toho datového typu).
+
+    detailní pravidla...
+    
+.link https://golang.org/ref/spec#Properties_of_types_and_values
+
+* Deklarace funkcí
+
+Funkce mohou vracet libovolný počet parametrů.
+
+    func do(a,b string) { }                     // do("in1", "in2")
+    func do(a,b string) (string, error) { }     // r, err := do("in1", "in2")
+    
+Funkce "nad datovou strukturou" - zhruba něco jako *metody* z Pythonu.
+    
+    func (p Person) do(a string) (string,error) // r, err := p.do("in1")
+
+Parametry se předávají "by value" - k tomu se ještě dostaneme.
+
+.play function.go /START/,/END/
+  
+*
+
+.image gopher2.png 560 600
+
+* Jak psát programy v Go?
+
+- jeden adresář = jedna package
+- jeden adresář může obsahovat více souborů s příponou `.go`, 
+  ale všechny musí mít stejnou package
+
+Například, může to vypadat nějak takhle:
+
+    /some/directory
+        main.go             // func main() { walkFiles(); ... }
+        files.go            // func walkFiles() { ... }
+        globals.go          // var global1 int ...
+
+Pokud píšete krátký program, který nemá závislosti jinam než na standardní knihovnu, 
+pak s tímto vystačíte.
+
+* Jak psát programy v Go?
+        
+Pokud:
+
+- používáte knihovny, které *nejsou* součástí standardní knihovny; *nebo*
+- je váš program složitější, obsahuje další balíčky ktomě balíčku `main`
+
+Pak musíte:
+
+- *deklarovat* "plný název" balíčku, na kterém pracujete;
+  ten je zpravidla dán cestou k Git repository, kde verzujete kód
+- deklarovat každou *externí* *závislost* zvlášť
+
+    Go a Git
+
+Jazyk Go je úzce svázaný s nástrojem Git, podporuje i další CVS (Mercurial, SVN),
+ale nikdy jsem neměl příležitost si to vyzkoušet.
+
+* go modules
+
+* Příklad "nasucho"
+
+.link https://golang.org/doc/tutorial/create-module
+
+Inicializace git repository
+
+    $ mkdir C:/temp/gotst && cd C:/temp/gotst
+    
+    $ git init
+    Initialized empty Git repository in C:/temp/gotst/.git/
+
+Pojmenování nástroje na kterém budu pracovat ...
+
+    $ go mod init gitce.cz.o2/BIDEV/recombobulator
+    go: creating new go.mod: module gitce.cz.o2/BIDEV/recombobulator
+
+Deklarace externí závislosti na knihovně docopt
+
+    $ go get github.com/docopt/docopt.go
+    go get: added github.com/docopt/docopt.go v0.0.0-20180111231733-ee0de3bc6815
+
+
+* 
+
+Vzniknou dva soubory, které se zpravidla verzují v Git.
+
+go.mod
+
+    module gitce.cz.o2/BIDEV/recombobulator
+    go 1.16
+    require github.com/docopt/docopt.go v0.0.0-20180111231733-ee0de3bc6815 // indirect 
+
+go.sum
+
+    github.com/docopt/docopt.go v0.0.0-20180111231733-ee0de3bc6815 h1:HMAfwOa33y82IaQEKQDfUCiwNlxtM1iw7HLM9ru0RNc=
+    github.com/docopt/docopt.go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:l7JNRynTRuqe45tpIyItHNqZWTxywYjp87MWTOnU5cg= 
+
+- Od toho okamžiku, jakákoliv package pod aktuálním adresářem sdílí 
+  svoje závislosti s ostatními (používá stejný `go.mod`).
+- Pro jeden `go.mod` může klidně existovat více aplikací (různých balíčků `main` 
+  v různých podadresářích).
+
+* Problémy na VPN
+
+*
+
+Pokud dostanete tohle ...
+
+    proxyconnect tcp: dial tcp 10.21.197.46:8080: ...
+
+pravděpodobně jde o problém s nastavením proxy serveru.
+
+    // SWITCH OFF
+    git config --global --unset-all http.proxy
+    set http_proxy=
+    set https_proxy=
+
+    // SWITCH ON
+    git config --global http.proxy http://internet-proxy-s1.cz.o2:8080/
+    set http_proxy=http://internet-proxy-s1.cz.o2:8080/
+    set https_proxy=http://internet-proxy-s1.cz.o2:8080/
+
+.link https://gitlab.com/Herout/cheatsheet/-/blob/master/content/git_behind_proxy.md
+
+* IDE
+
+
+* Go Playground
+
+.link https://play.golang.org/
+
+- vhodný pro vyzkoušení jednoduchého kódu
+- vhodný pro sdílení "snippetů" kódu
+
+Alternativní beta - syntax highlighting, live syntax check, ...
+
+.link https://goplay.space/
+
+* Notepad++
+
+.link https://notepad-plus-plus.org/downloads/
+
+- jednoduchý, rozšiřitelný; bez code completion
+- syntax highlighting - C
+- lze do něj bez problému zaintegrovat `gofmt` a `goimports`
+- ... ale *není* to IDE
+
+* Visual Studio Code
+
+.link https://code.visualstudio.com/
+
+- pomalé (JavaScript), nestabilní
+- existují extenze pro Go
+- syntax highlighting, code completion, generování kódu
+- podpora language serveru
+
+* Goland
+
+.link https://www.jetbrains.com/go/
+
+- komerční nástroj, subskripce; 30 dni trial
+- kompletní IDE, včetně integrace na debugger
+

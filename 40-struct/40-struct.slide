@@ -1,0 +1,205 @@
+Go, struct
+Jan Herout
+
+* Témata
+
+- struktura jako nositel dat
+- OOP
+
+* struktura jako nositel dat 
+  
+* struct
+
+`struct` je kolekce polí, je užitečná k seskupení dat podle nějakého účelu.
+
+    // tuto strukturu se pomocí standardní knihovny nepodaří serializovat
+    type person struct {
+        name      string
+        yearBorn  int
+    }
+
+- Názvy polí *musí* být *unikátní*
+
+
+* instance struktury
+   
+    type Person struct {
+        Name     string
+        YearBorn int
+    }
+
+Zkrácený zápis založení nové instance
+
+    peter := Person { "Peter", 1981 }
+
+Dlouhý zápis založení nové instance
+
+    john := Person {
+        Name : "John Doe",
+        YearBorn: 1977,     // ČÁRKA NA KONCI!
+    }
+    
+    var jane Person = Person{Name: "Jane Doe", YearBorn: 1981}
+    
+
+* struct a (de)serializace
+
+- Pro (de)serializaci (a další účely) se často používají tzn *tagy* jednotlivých polí.
+- (de)serializace exportovaných položek
+
+    type Person struct {                   // <person>
+        Name     string `xml:"name"`       //     <name>John Doe</name>
+        YearBorn int    `xml:"year_born"`  //     <year_born>1977</year_born>
+    }                                      // </person>
+
+- tagy jsou využívány i k jiným věcem.
+
+.link https://github.com/golang/go/wiki/Well-known-struct-tags
+
+
+* struct a (de)serializace
+
+.play xml-primer.go
+   
+* OOP
+
+* OOP
+    
+    OOP                     Go
+    ---------------------------------------------------------
+    encapsulation           ano, exported/unexported names
+    abstrakce               ano, interfaces
+    dědičnost               NE!
+    polymorfismus           jak se to vezme ...
+
+V dalším textu budu volně zaměňovat termíny "struktura" a "třída", nenechte
+se tím prosím zmást.
+
+    Composition over inheritance.
+
+
+
+* composition: struct embedding
+
+Například - mějme následující třídu:
+
+    // Animal represents anything, which has legs, and can walk.
+    type Animal struct {
+        Legs   int    // number of legs this animal has
+        kind   string // what kind of the animal this is?
+        atLat  int    // latitude where the animal is
+        atLong int    // longitude where the animal is
+    }
+
+* composition: struct embedding
+
+Potom je možné deklarovat následující třídu, která je "potomkem" třídy `Animal`.
+
+    // Dog is an Animal, which can be named, and can also bark!
+    type Dog struct {
+        Name        string // everybody names their favourite puppy...
+        IsPureBreed bool   // is the dog a pure blood?
+        Animal             // COMPOSITION: Dog *is* an Animal.
+    }
+
+Třída `Animal` je součástí třídy `Dog` (kompozice). 
+
+- neplatí tedy: _Dog_ _is_ _Animal_
+- platí místo toho: _Dog_ *has* _Animal_
+
+Může se zdát, že jde o sémantický rozdíl. V dalším textu budu nadále 
+používat slovo "je", místo slova "má" (skládá se z).
+
+* composition: struct embedding - chování (metody)
+
+Dále je možné popisovat chování (definovat metody) na různých úrovní hierarchie.
+
+    // WalkTo moves the animal to latitude and longitude.
+    func (a *Animal) WalkTo(lat, lng int) {
+        a.atLat, a.atLong = lat, lng
+    }
+
+Každé zvíře je schopné dojít na určené souřadnice. Pro připomenutí, Pes "je" Zvíře.
+
+    // Dog is an Animal, which can be named, and can also bark!
+    type Dog struct {
+        Name        string // everybody names their favourite puppy...
+        IsPureBreed bool   // is the dog a pure blood?
+        Animal             // COMPOSITION: Dog *has* an Animal.
+    }
+    
+    // ... někde později v kódu ...
+    var d Dog                       // inicializace nulovými hodnotami
+    d.WalkTo(-10,1)                 // jako : d.Animal.WalkTo(-10,1)
+
+Kompilátor si sám umí doplnit "správnou" úroveň v hierarchii.
+
+* composition: struct embedding - chování (metody)
+
+Pochopitelně, ne každé zvíře umí štěkat. Takže následující metoda bude deklarovaná 
+na té "správné" úrovni hierarchie.
+
+    // Bark is a Dog method. Pure breed's bark is slightly more affectionate.
+    func (d *Dog) Bark() string {
+        if d.IsPureBreed {
+            return "Haf!"
+        }
+        return "Štěk!"
+    }
+
+* composition: struct embedding - polymorfismus
+
+Co se stane když je stejná metoda dostupná z více částí dané třídy?
+
+.play disambiguation.go /START/,/END/
+
+Pokud si kompilátor musí vybrat, a volba není jasná, kompilaci odmítne.
+
+* composition: struct embedding - polymorfismus
+
+Ale stačí doplnit jeden řádek ...
+
+.play disambiguation2.go /START/,/END/
+
+
+* konstruktor
+
+* "make default value useful"
+
+Pokud je to možné, měli bychom se snažit o to, aby nebylo nutné používat 
+specializovaný konstruktur.
+
+Typický příklad:
+
+.link https://golang.org/pkg/bytes/#Buffer
+
+* naivní konstruktor
+
+Všimněte si toho, že inicializace zde probíhá v hierarchické struktuře.
+
+    // NewDog returns an Animal which is also a Dog.
+    func NewDog(name string, isPure bool) Dog {
+        return Dog{
+            Name:        name,
+            IsPureBreed: isPure,
+            Animal: Animal{
+                Legs: 4,            // pes má zpravidla 4 nohy
+                kind: "dog",        // a je to pes
+            },
+        }
+    }
+
+Pro připomenutí:
+
+    // Dog is an Animal, which can be named, and can also bark!
+    type Dog struct {
+        Name        string // everybody names their favourite puppy...
+        IsPureBreed bool   // is the dog a pure blood?
+        Animal             // COMPOSITION: Dog *has* an Animal.
+    }
+
+* naivní příklad
+
+Kompletní kód ...
+
+.link https://goplay.space/#ZDIDsbVtt7P

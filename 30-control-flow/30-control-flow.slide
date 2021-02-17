@@ -1,0 +1,290 @@
+Go, kontrolní struktury
+Jan Herout
+
+* Témata
+
+    +------------------------------+------------------------------+
+    |                              |                              |
+    |   for                        |   smyčka a nekonečná smyčka  |
+    |                              |                              |
+    +------------------------------+------------------------------+
+    |                              |                              |
+    |   if, else, else if          |   podmíněný běh větve kódu   |
+    |                              |                              |
+    +------------------------------+------------------------------+
+    |                              |                              |
+    |   "line of sight"            |   best practice              |
+    |                              |                              |
+    +------------------------------+------------------------------+
+    |                              |                              |
+    |   switch, case               |   podmíněný běh větvě kódu   |
+    |                              |                              |
+    +------------------------------+------------------------------+
+    |                                                             |
+    |                 CVIČENÍ                                     |
+    |                                                             |
+    +-------------------------------------------------------------+
+    
+    
+
+* cyklus: for
+
+*
+
+C-like for
+
+    for <init>; <condition>; <post>
+
+.play for1.go
+
+* for
+
+`init` a `post` statement je nepovinný.
+
+.play for2.go
+
+Zpravidla se to ale píše nějak takhle:
+    
+    for sum < 200 { 
+        sum += sum 
+    }
+
+* for a nekonečná smyčka
+
+- `continue` přeskočí kód který následuje za klíčovým slovem, a jde na začátek
+- `break` opustí smyčku
+
+    package main
+    
+    func main() {    
+        for {    
+            if wantExitFunc() {
+                break           // ukončí aktuální smyčku
+            }
+            if wantNextFunc() {
+                continue        // přeskočí na další iteraci
+            }
+            doSomethingUseful()            
+        }    
+    }
+
+* continue, break a label
+
+- předchozí příklad ukazoval, jak použít `continue` k přeskočení na další iteraci
+  *vnitřní* smyčky.
+- v některých případech ale máte vnořené dva (a více) cyklů do sebe, a potřebujete
+  specifikovat, kterého z nich se má `break` / `continue` týkat.
+
+.play labels.go /START/,/END/
+
+* goto a label
+
+- Go obsahuje i příkaz `goto`. 
+- Jednou ze zásad strukturovaného programování je `goto` nepoužívat. 
+- Důvod je ten, že jeho použití často vede k nepřehlednému "spaghetti" kódu.
+
+.play goto.go /START/,/END/
+
+Nicméně, není to dogma. Tady se například `goto` používá jako kombinace `break`, 
+a `if` - šlo by to přepsat, ale bylo by to složité/nečitelné.
+
+.link https://golang.org/src/math/gamma.go
+
+Je zde také vidět, že se štítek dá napsat před libovolné klíčová slovo jazyka Go.
+
+* if
+
+* 
+
+- Závorky kolem podmínky jsou nepovinné
+
+    if x < 10 {
+        // do ...
+    } else {
+        // ... something else ...
+    }
+    
+- if se často kombinuje s deklarací "throw away" proměnné
+
+    if err:= funcCanFail(); err != nil {
+        log.Println(err)
+        return err
+    }
+
+* 
+
+Příkazy `if` se dají za sebe řetězit. Zhruba takhle:
+
+    if num := 9; num < 0 {
+        fmt.Println(num, "is negative")
+    } else if num < 10 {
+        fmt.Println(num, "has 1 digit")
+    } else {
+        fmt.Println(num, "has multiple digits")
+    } 
+
+Vede to ale k nepřehlednému kódu, a může být vhodné místo toho použít `switch`.
+
+* line of sight
+
+*
+
+_Happy_ _path_ je cesta programem, kterou chceme běžně procházet. Jde o situaci, 
+kdy nenastala žádná výjimečná situace, a exekuce programu probíhá podle "naivního"
+scénáře.
+
+Jeden ze základních principů psaní v kódu je udržet _happy_ _path_ v jedné úrovni indentace.
+
+.image happy-path1.png
+
+Toto se považuje za neidiomatický, "nesprávně" napsaný kód. Na první pohled není možné oddělit ošetření výjimek od "chtěné" cesty programem.
+
+* 
+
+Reálný příklad ze života - co z toho je "happy path"?
+
+.link https://github.com/kubeflow/katib/blob/40f55b41c/pkg/controller.v1alpha3/trial/trial_controller.go#L259-L291
+
+
+*
+
+.image happy-path3.png
+
+* switch, case
+
+* C++
+
+Takhle nějak to vypadá v jazyce *C* - pro někoho to může být *matoucí*.
+
+    switch (expression)
+    ​{
+        case constant1:
+          // statements
+          //    chybí tady break, a provedou se všechny instrukce
+          //    v tomto case, a ve všech dalších case + default !!!
+
+        case constant2:
+          // statements
+          break;        // tady končíme, nic dalšího se neděje
+        ...        
+        default:
+          // default statements
+    }
+
+* Go
+
+V jazyce Go je `break` implicitní - provede se pouze jeden `case`
+
+.play switch1.go /START/,/END/
+
+*Pamatujte* *si*: spouští se pouze *jeden* case!
+
+* fallthrough
+
+Fallthrough předá řízení následujícímu _case_ - podmínka se nevyhodnocuje.
+
+.play fallthrough.go /START/,/END/
+
+Hint: jak sami vidíte, docela to znepřehledňuje kód.
+
+* 
+
+.play switch2.go /START/,/END/
+
+Všimněte si zakomentovaného příkazu `switch`, ukazuje alternativu:
+
+- deklarujeme proměnnou `hour`, která drží aktuální hodinu, a která má platnost
+  pouze v rámci `switch` bloku
+- ten *středník*, který je tam uvedený, je v takovém případě nutný 
+  (alternativně místo něj lze napsat explicitní `true`)
+  
+.link https://play.golang.org/p/uom2iJzIGH-
+
+* recap
+
+for
+
+    for i:=0; i<16; i++ { ... }
+
+"while"
+    
+    x:=0
+    for x < 15 { 
+        x++
+    }
+    
+nekonečná smyčka
+
+    for { 
+        if something {
+            break           // ukončí smyčku
+        }
+        if something_else {
+            continue        // pokračuj další iterací
+        }
+    }
+
+* recap
+    
+if, else, else if
+
+	var x int
+	if x > 0 {
+		fmt.Println(x)
+	}
+
+switch
+
+	switch {
+	case x < 0:
+		fmt.Println("záporné číslo")
+	case x==0:
+		fmt.Println("nula?!")
+	default:
+		fmt.Println("kladné číslo")
+	}
+
+*line* *of* *sight!*
+
+* cvičení: fizz buzz
+
+- mějme čísla od jedné do 15, procházíme je v cyklu
+- pokud je číslo beze zbytku dělitelné trojkou, vypiš "fizz"
+- pokud je číslo beze zbytku dělitelné pětkou, vypiš "buzz"
+- pokud je číslo beze zbytku dělitelné 15, vypiš "fizzbuzz"
+- jinak vypiš dané číslo
+
+*HINT*
+
+    // Test dělitelnosti pětkou.
+    // Jde to ale napsat i bez toho. Implementaci nechám na Vás
+    if x % 5 == 0 { } 
+
+Očekávaný výstup je na dalším slajdu
+
+* výstup
+
+    1
+    2
+    fizz
+    4
+    buzz
+    fizz
+    7
+    8
+    fizz
+    buzz
+    11
+    fizz
+    13
+    14
+    fizzbuzz
+
+Kde to psát ...
+
+.link https://goplay.space/
+.link https://play.golang.org/
+
+* jeden z možných algoritmů
+
+.play fizzbuzz.go /SHOW OMIT/,/ENDSHOW OMIT/

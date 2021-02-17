@@ -1,0 +1,120 @@
+Go: error
+Jan Herout
+
+* error
+
+Datový typ `error` je *interface* (a k tomu se dostaneme později).
+Proměnná typu `error` je libovolná proměnna, která se umí popsat jako string.
+
+    type error interface {
+        Error() string
+    }
+
+Co to znamená? Znamená to, že jakýkoliv datový typ, který implementuje
+metodu Error, je typu `error`.
+
+V praxi novou instanci typu `error` vytváříme nejčastěji takto:
+    
+.play err1.go /START/,/END/
+
+* error a nil
+
+Nulová hodnota typu `error` je `nil`.
+
+.play err2.go /START/,/END/
+
+V praxi se error nejčastěji používá jako poslední výstupní parametr z funkce,
+která může selhat.
+
+* naivní error handling v aplikaci
+
+`panic` není ideální způsob, jak ošetřit případnou chybu v aplikaci. Je to "last resort".
+
+.play err3.go /START/,/END/
+
+* errors are values
+
+*
+
+Chyba v jazyce Go je hodnota, a lze s ní tak nakládat.
+
+- dá se odložit na `[]error` slice, a později lze reportovat všechny chyby najednou
+- dá se porovnat s jinou chybou
+- dají se na ní nalepit další metadata 
+- dá se serializovat na disk, do databáze, dá se zalogovat ...
+
+    type MojeChyba struct {
+        msg              string  // co se stalo?
+        maxRetries       int     // kolikrát se ještě mohu pokusit proces "resuscitovat"?
+        waitAfterRetry   time.Duration // za jak dlouho?
+    }
+    
+    func (e MojeChyba) Error() string { return msg }
+
+Cokoliv, co implementuje metodu Error(), vyhoví datovému typu  `error`.
+
+* don't just report errors, handle them gracefully
+
+*
+
+"Handle" může znamenat mnoho různých věcí:
+
+- anotuj chybu (doplň detail), zaloguj, přeskoč.
+- serializuj všechna metadata chyby jako JSON, a ten zaloguj.
+- pošli SMS.
+- "zkus to znovu"
+
+Jedním z nejjednodušších příkladů může být "error wrapping" - 
+kdy se na chybu postupně nabalují doplňující informace.
+
+Existuje řada "non core" knihoven, které usnadňují práci s chybami.
+
+Zejména:
+
+.link https://github.com/emperror/emperror
+.link https://github.com/palantir/stacktrace
+.link https://github.com/hashicorp/go-multierror
+
+
+* error wrapping
+
+.play err4.go /START/,/END/
+
+* příklady ze standardní knihovny
+
+package os
+
+    // Open opens the named file for reading. If successful, methods on
+    // the returned file can be used for reading; the associated file
+    // descriptor has mode O_RDONLY.
+    // If there is an error, it will be of type *PathError.
+    func Open(name string) (*File, error)
+
+
+package io
+
+    // ReadAll reads from r until an error or EOF and returns the data it read.
+    // A successful call returns err == nil, not err == EOF. Because ReadAll is
+    // defined to read from src until EOF, it does not treat an EOF from Read
+    // as an error to be reported.
+    func ReadAll(r Reader) ([]byte, error) {
+
+* cvičení 1
+
+Napište následující funkci:
+
+    // factorial takes a string, converts it into a number, and calculates factorial, 
+    // if possible. 
+    // Error is returned if:
+    //   - the string can not be converted to a number
+    //   - resulting number is negative
+    func factorial(input string) (int, error)
+
+Projděte si...
+    
+    strconv.Atoi        strconv.Itoa        strconv.ParseBool
+    
+.link https://golang.org/pkg/strconv/
+
+.play cviko1.go /START/,/END/
+

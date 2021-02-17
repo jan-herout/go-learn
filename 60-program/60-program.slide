@@ -1,0 +1,376 @@
+Go: napíšeme si program
+Jan Herout
+
+* TDD
+
+* 
+.image tdd.png
+
+* cc (conditional create)
+
+* 
+
+Napíšeme si program, který do SQL skriptů umí doplnit hlavičku pro 
+likvidaci tabulky, pokud už ta tabulka existuje.
+
+Dnes mám tenhle program napsaný v pythonu, výsledek vypadá nějak takhle:
+    
+    -----------------------------------------------------------------------
+    /*--conditional_create--*/
+    select count(*) from dbc.tables 
+    where tablename='CEM_O2TV_EPG_KALT' and databasename=( select database )
+    having count(*) > 0;
+
+    .IF ERRORCODE <> 0 THEN .QUIT 10;
+    .IF ACTIVITYCOUNT = 0 THEN .GOTO TABLE_DOES_NOT_EXIST;
+    .REMARK 'tabulka EXISTUJE'
+    drop table CEM_O2TV_EPG_KALT;
+
+    .LABEL TABLE_DOES_NOT_EXIST
+    -----------------------------------------------------------------------
+    /*==============================================================*/
+    /* Table: RUIAN_ADDR_COVRG_DN1                                  */
+    /*==============================================================*/
+    create multiset table RUIAN_ADDR_COVRG_DN1 (
+        ruian_addr_id                   INTEGER                        not null,
+        start_dttm                      TIMESTAMP(6)                   not null,
+        end_dttm                        TIMESTAMP(6)                   not null,
+        ruian_code                      VARCHAR(500)                      character set unicode,
+        cross_id_adr                    VARCHAR(100)                      character set unicode,
+        
+        // kráceno
+
+* 
+
+Program který:
+
+    - akceptuje název adresáře, nebo použije `cwd` pokud žádný není zadaný
+    - rekurzivně projde adresář, a sestaví seznam `*.sql` souborů, které v něm jsou
+    - každý soubor otevře pro čtení:
+        - podívá se, zda v záhlaví je comment `/*--conditional_create--*/` - pokud ano, soubor se přeskočí
+        - podívá se, zda jde o create skript (regulární výraz)
+            - pokud ne, soubor se přeskočí
+            - pokud ano, odloží si název vytvářené tabulky (předpoklad: tabulka je jen jedna)    
+    - následně se soubor otevře pro zápis
+    - do souboru se doplní záhlaví, v záhlaví se dynamicky upraví název tabulky
+
+Cíle cvičení:
+
+    - paralelismus
+    - práce se soubory, práce s regulárními výrazy
+    - error handling
+    - struktura programu - cmd vs package
+    - test driven development
+    - ... a třeba se vám i výsledek bude hodit
+
+* Záhlaví
+
+    -----------------------------------------------------------------------
+    /*--conditional_create--*/
+    select count(*) from dbc.tables 
+    where tablename='___daná__tabulka___' and databasename=( select database )
+    having count(*) > 0;
+
+    .IF ERRORCODE <> 0 THEN .QUIT 10;
+    .IF ACTIVITYCOUNT = 0 THEN .GOTO TABLE_DOES_NOT_EXIST;
+    .REMARK 'tabulka EXISTUJE'
+    .GOTO KONEC
+
+    .LABEL TABLE_DOES_NOT_EXIST
+    -----------------------------------------------------------------------
+
+* Stavební prvky
+
+Práce se soubory
+
+.link https://golang.org/pkg/io/
+.link https://golang.org/pkg/os/
+
+    os.Open, os.Create, io.ReadAll
+
+Regulární výrazy
+
+.link https://golang.org/pkg/regexp/
+
+    regexp.MustCompile, regexp.FindAllSubmatch 
+    
+TDD
+
+.link https://golang.org/pkg/testing/
+
+    testing.T, T.Error, t.Errorf, t.FailNow
+
+* Předpoklady, omezení
+
+- každý create skript obsahuje pouze jeden CREATE TABLE statement (bonus points: ověřte)
+- skripty _mohou_ být nakódované ve `Windows-1250` - pozor, pokud jeho obsah načtete jako `string`,
+  nelze nad tím stringem provádět `range`, protože dojde k sanitizaci češtiny! (použijeme `[]byte`)
+
+Program budeme záměrně koncipovat, jako by to byla složitější knihovna.
+
+* Architektura
+
+
+
+    +---------------------------------------------------------+
+    |                main: init                               |
+    +-------+-------------------------------------------------+
+            |
+            |
+            |        +----+                +----+            
+         sniffer ->  |chan| -> analyzer -> |chan| -> patcher 
+                     +----+                +----+      |  
+                                                       |
+                +--------------------------------------+
+                |
+    +---------------------------------------------------------+
+    |                main: check for errors                   |
+    +-----------+---------------------------------------------+            
+    
+- *sniffer* je objekt, který na kanál zasílá seznam .SQL souborů
+- *analyzer* je objekt, který filtruje seznam pouze na ty, které budeme patchovat
+- *patcher* provede doplnění hlavičky do souboru
+
+* Jak na to?
+
+- Založte si nový, prázdný adresář, na nějakém vhodném místě.
+- Spustťe si command line, a přejděte do něj.
+
+    go mod init gitce.cz.o2/__váš_doménový__logon__/cc
+    
+Tím zakládáme "kořen" pro nový package.
+
+Následně z toho udělejte git repository
+
+    git init
+    git add --all
+    git commit -m"initial commit"
+
+Pokud nemáte nainstalovaný Git, tento krok ignorujte.
+
+* sniffer
+
+* Jak na to? Sniffer, failing test
+
+Založte podadresář pro interní komponenty.
+Vytvořte v něm dva prázdné soubory:
+    
+    ./internal/cc/sniffer.go
+    ./internal/cc/cc_test.go
+
+Editujte `cc_test`.`go`
+
+    package cc
+
+    import (
+        "testing"
+    )
+
+    func Test_cc(t *testing.T) {
+        t.Errorf("not implemented")
+    }
+
+*HINT*: sniffer.go musí obsahovat alespoň následující řádek:
+
+    package cc
+
+* Jak na to?
+
+Spusťte v adresáři test; mělo by to dopadnout nějak takhle:
+
+    c:\BI_Domain\learn-go\go\internal\cc>go test .
+    --- FAIL: Test_cc (0.00s)
+        cc_test.go:8: not implemented
+    FAIL
+    FAIL    gitlab.com/Herout/learn-go/sniffer      0.037s
+    FAIL
+    
+   
+* Jak na to?
+
+Upravte test - definujte *očekávané* *chování*.
+
+    func Test_cc(t *testing.T) {
+        prepFixtures("testData")
+        sniffer := NewSniffer("testData")
+        files := make([]string, 0)
+        for f := range sniffer.Sniff([]string{"sql"}) {
+            files = append(files, f)
+        }        
+        if len(files) == 0 {
+            t.Errorf("expected at least one file")
+        }
+        if err := sniffer.Err(); err != nil {
+            t.Errorf("unexpected error: %s", err)
+        }
+    }
+    
+Test selže, což je OK.
+
+    c:\BI_Domain\learn-go\go\internal\cc>go test
+    --- FAIL: Test_cc (0.00s)
+        cc_test.go:12: expected at least one file
+    FAIL
+    exit status 1
+    FAIL    gitlab.com/Herout/learn-go/internal/cc  0.053s
+
+* Commit
+
+    git add --all
+    git commit -m"sniffer stub"
+
+* Jak na to?
+
+Implementujte v *novém* souboru _sniffer.go_ potřebné funkce, a jejich metody v minimálním možném rozsahu (aby kompilace prošla).
+
+    // Sniffer prepares list of SQL files, recursively, in a given directory.
+    type Sniffer struct {}
+
+    // NewSniffer is a sniffer constructor. Each sniffer is bound to a directory.
+    func NewSniffer(dir string) *Sniffer {
+
+    // Sniff sends list of files, which have one of the provided extensions, down the channel.
+    // The processing runs in the background, function returns immediately, and returns the channel.
+    func (s *Sniffer) Sniff(ext []string) <- chan string {
+
+    // Err returns an error, if some were encountered.
+    func (s *Sniffer) Err() error {
+    
+Test selže.
+
+    c:\BI_Domain\learn-go\go\sniffer\internal\cc>go test .
+    --- FAIL: Test_Sniffer (0.00s)
+        sniffer_test.go:15: expected at least one file
+
+
+* Jak na to?
+
+Implementujte funkčnost tak, aby test prošel.
+
+.link https://golang.org/pkg/path/filepath/#Walk
+.link https://golang.org/pkg/io/fs/#FileInfo
+.link https://golang.org/pkg/strings/#ToUpper
+.link https://golang.org/pkg/strings/#HasSuffix
+.link https://golang.org/pkg/strings/#Builder
+
+    err := filepath.Walk("a-directory", func(path string, info fs.FileInfo, err error) error {
+        // pokud err != nil, nedá se zanořit do adresáře => chyba, konec
+        // pokud info.IsDir(), je to adresář, return nil
+        // pokud má soubor suffix, který chceme, pošli path na výstupní kanál
+        return nil
+    })     
+
+Fixtures
+
+.link https://gist.github.com/jan-herout/32db4194868a985529172dc746b6f631
+
+    git add --all && git commit
+
+* Analyzer
+  
+* Definujte test case
+
+	func Test_cc(t *testing.T) {
+		prepFixtures("testData")
+		sniffer := NewSniffer("testData")
+		analyzer := NewAnalyzer(sniffer.Sniff([]string{"sql"}))	
+	
+		files := make([]Metadata, 0)
+		for f := range analyzer.Analyze() {
+			files = append(files, f)
+		}
+	
+		if len(files) != 1 {
+			t.Errorf("expected to see 1 ddl script, got %d", len(files))
+		}
+	
+		if err := sniffer.Err(); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+		if err := analyzer.Err(); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+	}
+    
+Spusťte test ...
+    
+* 
+
+Test selže
+
+    c:\BI_Domain\learn-go\go\internal\cc>go test
+    # gitlab.com/Herout/learn-go/internal/cc [gitlab.com/Herout/learn-go/internal/cc.test]
+    .\analyzer_test.go:9:13: undefined: NewAnalyzer
+
+* Implementujte funkčnost postačující úspěšnou kompilaci
+
+Implementujte v *novém* souboru analyzer.go potřebné funkce, a jejich metody, v minimálním možném rozsahu (aby kompilace prošla).
+
+    // Analyzer opens all files from input channel, and identifies DDL scripts.
+    type Analyzer struct {}
+
+    // NewAnalyzer is an analyzer constructor. Channel c is an input channel, containing paths.
+    func NewAnalyzer(c chan string) *Analyzer {
+
+    // Analyzer opens files from input channel for reading, identifies DDL scripts, and finds
+    // name of created table. It then sends Metadata to the output channel.
+    // The processing runs in the background, function returns immediately, and returns the channel.
+    func (s *Analyzer) Analyze() <-chan Metadata {
+
+    // Err returns an error, if some were encountered.
+    func (s *Analyzer) Err() error {
+    
+    // Metadata about DDL scripts.
+    type Metadata struct {
+        Path        string      // path to the DDL of the table
+        TableName   string      // the table this DDL scripts creates
+        Content   []byte        // full content of the file in questions
+    }
+
+* Analyzer: stavební bloky
+
+* 
+
+Test
+
+	func Test_cc(t *testing.T) {
+		prepFixtures("testData")
+		sniffer := NewSniffer("testData")
+		analyzer := NewAnalyzer(sniffer.Sniff([]string{"sql"}))	
+
+		files := make([]Metadata, 0)
+		for f := range analyzer.Analyze() {
+			files = append(files, f)
+		}
+
+Files 
+
+.link https://golang.org/pkg/io/
+.link https://golang.org/pkg/os/
+
+    os.Open, io.ReadAll
+
+*
+
+Regexp
+
+.link https://golang.org/pkg/regexp/
+
+    re := regexp.MustCompile(`(?i)create\s+(set\s+|multiset\s+)?table\s+(?P<db>[a-z0-9_]+[.])?(?P<tab>[a-z0-9_]+)`)
+
+
+Matches
+    
+    // skip already done files
+    if reCmt.MatchString(dataString) { ... }
+	// test if it is a DDL script
+	match := re.FindStringSubmatch(string(data))         // on match, returns []string
+	names := re.SubexpNames()                            // returns []string with names of the match
+	result := make(map[string]string)                    // map of matches
+	for i, name := range names {
+		if i == len(match) { break }                     // no luck... no match!
+		if i != 0 && name != "" {
+			result[name] = match[i]
+		}
+	}
+	if name, ok := result["tab"]; ok { ... }

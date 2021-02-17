@@ -1,0 +1,148 @@
+Go, func - pokročilejší témata
+Jan Herout
+
+* variadic function
+
+*
+
+V jazyce Go je možné deklarovat, že akceptujete libovolný počet parametrů nějakého typu.
+
+    // The final incoming parameter in a function signature may have a type prefixed with .... 
+    // A function with such a parameter is called variadic and may be invoked with zero or 
+    // more arguments for that parameter.
+
+.play variadic.go /START/,/END/
+
+* funkce jako datový typ
+
+*
+
+V jazyce Go může existovat proměnná typu "funkce". Je tedy možné i deklarovat datový typ "funkce".
+
+.play func1.go /START/,/END/
+
+* k čemu to je?
+
+Příklad ze standardní knihovny:
+
+    // Walk walks the file tree rooted at root, calling fn for each file 
+    // or directory in the tree, including root.
+    func Walk(root string, fn WalkFunc) error
+    
+    type WalkFunc func(path string, info fs.FileInfo, err error) error
+
+.link https://golang.org/pkg/path/filepath/#Walk
+
+* defer
+
+*
+
+Klíčové slovo `defer` odkládá provedení dané akce až na okamžik, kdy funkce skončí.
+Takto lze odložit v podstatě libovolný počet akcí, a jsou potom vykonány v opačném
+pořadí, než v jakém bylo použito slovo `defer`.
+
+.play func2.go /START/,/END/
+
+    defered i= 5 x= 4       // proč je defered i vždy 5?
+
+- Protože printout je proveden v okamžiku, kdy jsme prošli celým cyklem (a zobrazí
+  proto vždy poslední prvek)
+  
+
+*
+
+Reálně se používá k vynucenému provedení úklidu systémových prostředků. 
+
+    h, err:= os.Open(path)           // otevře soubor na cestě
+    if err != nil { 
+        return err 
+    }
+    // nakonec soubor uzavřeme bez ohledu na to, kde funkce skončí
+    defer h.Close()
+    
+    // například, tohle může selhat, a můžeme skončit - ale soubor se STEJNĚ uzavře
+    if i, err := strconv.Atoi("jedna"); err != nil {
+        return err
+    }
+    
+*HINT*: pokud používám defer kvůli úklidu, umístím ho ihned pod alokaci prostředků.
+
+* panic a recover
+
+*
+
+Go nemá konstrukci `try` a `catch`. 
+
+.play panic.go /START/,/END/
+
+    // Panic is a built-in function that stops the ordinary flow of control and BEGINS PANICKING. 
+    // When the function F calls panic, execution of F stops, ANY DEFERRED 
+    // FUNCTIONS IN F ARE EXECUTED NORMALLY, and then F returns to its caller. To
+    // the caller, F then behaves like a call to panic. 
+    // The process CONTINUES UP THE STACK until all functions in the current goroutine have 
+    // returned, AT WHICH POINT THE PROGRAM CRASHES. 
+
+    // Recover is a built-in function that regains control of a panicking goroutine. 
+    // Recover is only useful inside deferred functions. 
+    // During normal execution, a call to recover will return nil and have no other effect. 
+
+* 
+
+.play panic2.go /START/,/END/
+
+* 
+
+- nesnažte se používat `recover` k řízení průchodu programem. Go není Python!
+
+    # PYTHON
+    try:
+        z = complex_calculation(x,y)
+        z = another_calculation(z)
+        z = finally_call_another_library(z)
+    except ZeroDivisionError as e:
+        print ("divide by zero")
+    except Exception as e:
+        print ("ANYTHING COULD HAPPEN!!!")
+
+.link https://docs.python.org/3/library/exceptions.html#exception-hierarchy Exceptions in Python
+
+
+* closure
+
+*
+
+Termín "closure" se vztahuje k faktu, že se funkce "uzavře" nad nějakou hodnotou.
+To může být užitečné například k tomu, aby si funkce držela informaci o stavu.
+
+Například nějak takhle se dá implementovat funkce, která vytvoří message, a přidělí jí
+unikátní číslo.
+
+
+
+* k čemu je to dobré? příklad 1
+
+.play func3.go /START/,/END/
+
+* k čemu je to dobré? příklad 2
+
+    // Walk walks the file tree rooted at root, calling fn for each file 
+    // or directory in the tree, including root.
+    func Walk(root string, fn WalkFunc) error
+    
+    type WalkFunc func(path string, info fs.FileInfo, err error) error
+    
+Co když chci zalogovat každý soubor do databáze, a moje `WalkFunc` tedy potřebuje db connection?
+    
+    // genWalker vrací funkci typu filepath.WalkFunc, která loguje do DB
+    func genWalker(con goracle.Conn) filepath.WalkFunc {
+        return func(path string, info fs.FileInfo, err error) error {
+            // ... zde mám nyní k dispozici connection v proměnné con
+            _, err := con.Exec("insert into files values ($1)", path)
+            return err
+        }
+    }
+    
+    // Nyní mohu použít generátor funkce, a předhodit mu connection na databázi.
+    // Generátor je closure (closes over connection), a vrátí funkci, jejíž signatura
+    // vyhovuje popisu typu filepath.WalkFunc.
+    filepath.Walk("c:/temp", genWalker(connection))

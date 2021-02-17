@@ -1,0 +1,286 @@
+Go: array, slice, map
+Jan Herout
+
+* array
+
+`array` je pole. V jazyce Go má  pole *fixní* délku, kterou nelze později změnit.
+
+.play array.go /START/,/END/
+
+Pole je indexováno pomocí celých čísel. Kompilátor se snaží "pohlídat si" přístup mimo rozsah pole.
+
+.play array3.go /START/,/END/
+
+Délku (kapacitu) pole je možné zjistit pomocí klíčového slova `len`.
+
+.play array5.go  /START/,/END/
+
+* range
+
+Klíčové slovo `range` zpřístupňuje jednotlivé *indexy* pole.
+
+.play array2.go /START/,/END/
+
+Často se používá zápis o dvou prvcích, kdy se vrací index, i hodnota.
+Pozor, hodnota je *kopie* - její změnou *nezměníte*  původní hodnotu v poli!
+
+.play array4.go  /START/,/END/
+
+* slice
+
+* slice
+
+Velmi zhruba lze říci, že `slice` je pole s dynamickou délkou. Slice deklarujete podobně jako pole.
+
+    var s []string             // slice hodnot typu string
+
+Interní reprezentace typu `slice` vypadá zhruba takhle:
+    
+    // Pseudokód !!! Reálně je to myslím napsané v assembleru.
+    type slice struct {
+        ptr *[]Element         // pointer na pole jednotlivých elementů
+        ln  int                // aktuální délka obsazené části pole : len(slice)
+        cp  int                // celkové dostupná kapacita          : cap(slice) 
+    }
+    
+Navenek je slice reprezentován právě tím pointerem. 
+
+.play slice1.go /START/,/END/
+
+* slice
+
+A jak se chová nil pointer pokud ho chceme dereferencovat?
+
+.play slice2.go /START/,/END/
+
+Slice je možné inicializovat během jeho tvorby pomocí "slice literálu", takhle:
+
+.play slice3.go /START/,/END/
+
+* make
+
+Slice je možné inicializovat klíčovým slovem `make` (nezaměňovat s `new!`). 
+
+`make` se používá ke konstrukci  instance složitějších datových typů, jako je slice, nebo map. 
+
+.play slice4.go /START/,/END/
+
+*Pozor:* ten první zápis je častým zdrojem chyb!
+    
+    // chci: *PRÁZDNÝ* slice s kapacitou deset
+    s := make([]int, 10)
+    // dostanu: slice s délkou a kapacitou 10, inicializovaný pomocí zero values
+    
+* slice boundaries
+
+.play slice5.go  /START/,/END/
+
+Přímý přístup na indexy slice, tak jak je uvedený nahoře, není vhodný způsob, jak
+do slice uložit novou hodnotu. Důvod je nyní asi zřejmý.
+
+* append
+
+Správný postup jak do slice přidat (na konec) novou hodnotu, je tento.
+
+    aSlice = append(aSlice, newItem)
+
+Viz ...
+
+.play slice6.go /START/,/END/
+
+Všimněte si, co se děje s *kapacitou* daného slice!
+
+* append a empty slice
+
+Append funguje korektně i pro slice, který nebyl inicializován.
+
+.play slice7.go /START/,/END/
+
+* range
+
+Chová se stejně jako pro pole.
+
+    for idx := range aSlice             // dostanu pouze index
+    for idx, val := range aSlice        // dostanu index, a kopii hodnoty uvnitř daného slice
+    
+Žádná změna, ani žádná past ...
+
+.play slice8.go /START/,/END/
+
+* slice a jeho mutabilita funkcí
+
+*
+
+Kdo ví, co tohle vrátí?
+
+.play slice-muta1.go /START/,/END/
+
+*pozor*, *PAST!*
+
+
+*
+
+.play slice-muta2.go /START/,/END/
+
+* TAKHLE je to správně!
+
+.play slice-muta3.go /START/,/END/
+
+*hint*: 
+- pokud chcete ve funkci daný slice změnit, je rozumné tento záměr v záhlaví deklarovat tím, že slice vrátíte zpátky!
+- cokoliv jiného je "černá magie", a Go programátoři nemají černou magii zrovna v lásce.
+
+    Explicit is `better` then implicit.
+
+* Ovšem POZOR!
+
+Kdo ví co tohle vrátí?
+
+.play slice-muta4.go /START/,/END/
+
+* Jak tedy správně slice kopírovat?
+
+    newSlice = make(<type>, len(oldSLice))
+    copy(newSlice, oldSlice)
+
+.play slice-muta5.go /START/,/END/
+
+* slicing the slice
+
+.play slice-the-slice.go /START/,/END/
+
+* SUMMARY
+
+    //-----------------------------------------------------------------------------------
+    s := make([]string, 0)                  // prázdný slice
+    s := make([]string, 0,10)               // prázdný, ale s předrezervovanou kapacitou
+    aSlice = append(s, "string")            // založ prvek
+    s = s[2:]                               // slice the slice: od druhého prvku do konce                               
+    
+    for i,v := range aSlice { ... }
+    for i   := range aSlice { ... }
+    
+    //-----------------------------------------------------------------------------------
+    sliceCopy = make([]string, len(aSlice)) // nový slice o stejné velikosti
+    copy(sliceCopy, aSlice)                 // přenes hodnoty z původního slice
+    
+    //-----------------------------------------------------------------------------------    
+    // readOnly uses the slice, but does not change it's content.
+    func readOnly([]string)
+    
+    // mutate creates a new slice, copies contents of the original slice, and
+    // mutates the content using "dark magic".
+    func mutate([]string) []string
+    
+* DIRTY SECRETS ....
+
+.link https://github.com/golang/go/wiki/SliceTricks
+
+* cvičení
+
+* cvičení 1
+
+Napište následující funkci:
+
+    // filterVowels accepts a string. It splits the string into words by white space or comma,
+    // and returns slice containing all words, that do NOT begin by a vowel (aeiouy).
+    func filterVowels(line string) []string 
+
+Projděte si dokumentaci k následujícím funkcím:
+
+    strings.ToLower     strings.HasPrefix       strings.ContainsAny   strings.Replace
+    strings.Fields      strings.Split           strings.EqualFold
+
+.link https://golang.org/pkg/strings/
+    
+Vzpomeňte si:
+
+    aSlice = append(aSlice, prvek)  // aSlice nemusí být inicializovaný
+    for _,r := range aString { }    // r je RUNA, je to "znak"; aString[0] je první BAJT
+                                    // Může platit, že bajt != znak; string(runa) => konverze
+    
+.play cviko1.go /START/,/END/
+    
+* map
+
+* 
+
+`map` je neseřazená skupina elementů jednoho typu, indexovaná množinou 
+unikátních klíčů. Inicializuje se hodnotou `nil`. 
+V některých ohledech se podobá datovému typ "slice".
+
+    var aMap map[ KeyType ] ElementType
+    
+Například:
+
+    var aMap map[string]string      // klíč je string, hodnota je string (slovník)
+    var aMap map[string]int         // klíč je string, hodnota je int (sledujeme počty)
+    var aMap map[*T]struct{ x, y float64 }  // klíč je pointer na T, hodnota "jsou souřadnice"
+
+Datový typ klíče musí být porovnatelný, 
+musí pro něj být kompletně definován operátor `==` a `!=`.
+
+    aMap := make(map[string]string)    // vytvoř novou mapi
+    aMap := make(map[string]int, 10)   // hint: rezervuj si kapacitu na 10 prvků
+
+
+* použití
+
+Konstrukce, přístup na položku.
+
+.play map1.go /START/,/END/
+
+Průchod cyklem přes všechny klíče (a hodnoty).
+
+.play map2.go /START/,/END/
+
+
+* map, nil, a její délka
+
+.play map-nil.go /START/,/END/
+
+.play map-nil2.go /START/,/END/
+
+* Test existence položky v mapě.
+
+Pokus o přístup k položce mapy vrátí jeden, nebo *dva* argumenty.
+
+.play map3.go /START/,/END/
+
+Přístup na neexistující hodnotu vrátí zero value!
+
+.play map4.go /START/,/END/
+
+    // Tohle lze vnímat jako koncepční rozdíl proti typu slice, kde
+    // přístup na neexistující prvek vyvolá *panic*
+    
+* Mutabilita
+
+Funkce, která dostane na vstupu mapu, může její obsah libovolně změnit.
+Není žádný způsob, jak jí v tom zabránit.
+
+    func mutate(m map[string]int) {
+        if m != nil {
+            m["mutate-this"] = 1        // tohle OVLIVNÍ nadřazený scope!
+        }
+    }
+        
+* cvičení 2
+
+Napište následující funkci:
+
+    // countWords counts all words in the string. Words are split by white space.
+    func countWords(text string) map[string]int
+    
+Následně napište funkci:
+    
+    // printSorted prints the map by sorted keys.
+    func printSorted(map[string]int)
+    
+Projděte si dokumentaci k následujícím funkcím:
+
+    sort.Strings        sort.Ints
+
+.link https://golang.org/pkg/sort
+
+.play cviko2.go /START/,/END/

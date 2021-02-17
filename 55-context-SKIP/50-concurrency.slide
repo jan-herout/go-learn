@@ -1,0 +1,28 @@
+Go: context
+Jan Herout
+
+* 
+
+Toto není dokončená lekce. Původně jsem vůbec neplánoval o balíčku `context` mluvit.
+
+    import "context"
+    
+.link https://golang.org/pkg/context/
+
+    func Filter(ctx context.Context, in <-chan int, prime int) <-chan int {
+        out := make(chan int)
+        go func() {
+            defer close(out)
+            for i := range in {        // Receive value from 'in'.
+                if i%prime != 0 {
+                    select {
+                    case out <- i:     // Send 'i' to 'out'.
+                        // continue
+                    case <-ctx.Done(): // ... or, if cancel signal was sent, return
+                        return
+                    }
+                }
+            }
+        }()
+        return out
+    }
