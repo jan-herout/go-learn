@@ -40,7 +40,12 @@ Další zdroje na youtube
 - [justforfunc](https://www.youtube.com/channel/UC_BzFbxG2za3bp5NRRRXJSw) - dedikovaný kanál
 - [go pointers](https://www.youtube.com/watch?v=sTFJtxJXkaY&t=109s)
 
+Tools - "náhodná" kolekce užitečných nástrojů, napsaných v Go.
 
+- [modd](https://github.com/cortesi/modd)
+- [sift](https://github.com/svent/sift)
+- [hugo](https://gohugo.io/)
+- [kristy](https://github.com/spotlightpa/kristy)
 
 
 ## Slides

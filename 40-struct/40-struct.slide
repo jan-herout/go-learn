@@ -67,7 +67,7 @@ Dlouhý zápis založení nové instance
     
     OOP                     Go
     ---------------------------------------------------------
-    encapsulation           ano, exported/unexported names
+    zapouzdření             ano, exported/unexported names
     abstrakce               ano, interfaces
     dědičnost               NE!
     polymorfismus           jak se to vezme ...
@@ -99,7 +99,7 @@ Potom je možné deklarovat následující třídu, která je "potomkem" třídy
     type Dog struct {
         Name        string // everybody names their favourite puppy...
         IsPureBreed bool   // is the dog a pure blood?
-        Animal             // COMPOSITION: Dog *is* an Animal.
+        Animal             // COMPOSITION: Dog *has* an Animal.
     }
 
 Třída `Animal` je součástí třídy `Dog` (kompozice). 
@@ -198,8 +198,24 @@ Pro připomenutí:
         Animal             // COMPOSITION: Dog *has* an Animal.
     }
 
-* naivní příklad
+* k čemu je to všechno dobré?
 
-Kompletní kód ...
+*
 
-.link https://goplay.space/#ZDIDsbVtt7P
+Příklady ze standardní knihovny:
+
+File handle.
+
+    h, err := os.Open("a-file")         // file deskriptor je struct
+    check(err)
+
+.link https://golang.org/pkg/os/#File
+
+Bufio reader (reader který má "pod sebou" buffer)
+
+    b := bufio.NewReader(h, 1024)       // buffer z deskriptoru otevřeného souboru, 1024 bajtů; struct
+    data := make([]byte,100)            // byte slice o délce 100
+    _,err := b.Read(data)               // načte maximálně 100 bajtů z *bufferu*, který si je vytáhne ze *souboru*
+
+.link https://golang.org/pkg/bufio/#Reader
+
