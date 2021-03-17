@@ -90,7 +90,7 @@ Viz také:
 | https://github.com/hexops/gotextdiff/     | compare and diff             |
 | https://github.com/asaskevich/govalidator | validátor stringů a struktur |
 
-## Dev Tools
+## Dev Tools & other
 
 | url                                                | comment                                       |
 | -------------------------------------------------- | --------------------------------------------- |
@@ -99,5 +99,4 @@ Viz také:
 | https://github.com/wtetsu/gaze                     | jako `modd`, ale jednodušší - bez konfigurace |
 | https://tpaschalis.github.io/delve-debugging/      | jak použít `delve` debugger?                  |
 | https://pkg.go.dev/golang.org/x/tools/cmd/stringer | generátor `fmt.Stringer` interface            |
-
-| https://github.com/mattn/docx2md | `docx` to `md` |
+| https://github.com/mattn/docx2md                   | `docx` to `md`                                |
