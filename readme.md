@@ -99,7 +99,7 @@ Problém:
 
 - Prezentace běží z adresy [localhost:3999](http://localhost:3999)
 - V command okně, kde běží present, je následující chyba: `2021/02/26 10:23:39 bad websocket origin: http://localhost:3999`
-- Nedaří se spustit pčíklady
+- Nedaří se spustit příklady
 
 Workaround:
 
