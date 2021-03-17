@@ -296,13 +296,21 @@ Pro práci s takovým datovým typem je často nutné jej "přetypovat"
     y := 10                    // tohle je int
     var x myInt = y            // neprojde: cannot use y (type int) as type myInt in assignment
     var x myInt = myInt(y)     // projde po přetypování
-    
+
+* 
+
 Existuje možnost založit _alias_ na datový typ. Jde vlastně jen o jiné pojmenování
 dříve existujícího datového typu.
 
     type myInt = int           // myInt je vlastně int, není to nový datový typ
     y := 10                    // tohle je int
     var x myInt = y            // projde, protože myInt = int
+
+.link https://go.googlesource.com/proposal/+/master/design/18130-type-alias.md
+
+    Type aliases are not meant for everyday use. They were introduced to support gradual 
+    code repair while moving a type between packages during large-scale refactoring. 
+    Codebase Refactoring (with help from Go) covers this in detail.
 
 * Klíčové slovo type
 
