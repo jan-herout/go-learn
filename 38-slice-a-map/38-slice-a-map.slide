@@ -220,9 +220,7 @@ Například:
 Datový typ klíče musí být porovnatelný, 
 musí pro něj být kompletně definován operátor `==` a `!=`.
 
-    aMap := make(map[string]string)    // vytvoř novou mapi
-    aMap := make(map[string]int, 10)   // hint: rezervuj si kapacitu na 10 prvků
-
+    aMap := make(map[string]string)    // vytvoř novou mapu
 
 * použití
 

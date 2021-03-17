@@ -33,9 +33,10 @@ Reader je cokoliv, co implementuje metodu...
 
     Read(p []byte) (n int, err error)
     
-Současně s tím se očekává, že implementace vyhoví dalším podnímkám, které jsou
+Současně s tím se očekává, že implementace vyhoví dalším podmínkám, které jsou
 specifikovány v popisu rozhraní `Reader`.
 
+.link https://golang.org/pkg/io/#Reader
 .link https://golang.org/pkg/io/#Reader
 
 Může to být například: soubor, buffer, socket, .....
@@ -154,33 +155,18 @@ Na pozadí si proměnnou typu `interface` můžete představit jako strukturu o 
     // TYPE : určuje, jakého konkrétního typu je hodnota uložená v této proměnné
     // PTR  : POINTER na konkrétní instanci typu TYPE
 
-Když deklarujete proměmnnou typu interface (například error), inicializuje se takto:
+Když deklarujete proměnnou typu interface (například error), inicializuje se takto:
     
     // r.TYPE = nil - o konkrétním typu nevím nic
     // r.PTR  = nil - nemám na co "ukázat", nemám žádnou hodnotu na vstupu
     var r io.Reader
 
-Například: do proměnné typu io.Reader můžu přiřadit pointer na buffer.
+Pozor!
 
-.link https://pkg.go.dev/bytes#Buffer
+.play empty2.go /START/,/END/
+    
+    
 
-    var b bytes.Buffer
-    r = b    
-    //    ............        nebo    
-    var bp *bytes.Buffer
-    r = bp
-
-* a to je past!
-
-*
-
-.play as-pointer.go /START/,/END/
-
-*
-
-Je *velmi* těžké korektně detekovat nil pointer v proměnné interface.
-
-*HINT:* pokud na proměnnou typu `interface` přiřazujete pointer, buďte *velmi* opatrní.
 
 * best practices
 

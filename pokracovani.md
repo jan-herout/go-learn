@@ -133,8 +133,9 @@ Program by měl běžet paralelně (goroutines).
 ### Procvičíte si
 
 - parsing [argumentů](https://golang.org/pkg/flag/) z příkazové řádky
-- práci se [soubory](https://golang.org/pkg/os/), práci s [bufferem a scanning](https://golang.org/pkg/bufio/)
+- práci se [soubory](https://golang.org/pkg/os/)
 - "portable" práci s [cestou](https://golang.org/pkg/path/filepath/) na souborovém systému, a rekurzivní scan
 - práci s [regulárními výrazy](https://golang.org/pkg/regexp/)
 - orchestraci jednotlivých gorutin - channel, mutex
+
 

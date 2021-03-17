@@ -7,6 +7,6 @@ func main() {
 	m := make(map[string]int)
 	m["abcd"] = 1
 	m["xyz"] = 2
-	fmt.Println("%#v\n",m)
+	fmt.Printf("%#v\n",m)
 	// END,OMIT
 }

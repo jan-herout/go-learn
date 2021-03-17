@@ -16,6 +16,10 @@ Free, online books
 - [Spaceship Go](https://blasrodri.github.io/spaceship-go-gh-pages/cover.html) - Tak trochu filozofické čtení; nejspíš nevhodné, pokud s Go začínáte - text oceníte až s odstupem.
 - [Webapps in Go the anti text book](https://thewhitetulip.gitbook.io/bo/)
 
+Vybrané knihovny (můj vlastní seznam)
+
+- [libraries.md](libraries.md)
+
 Online školení (free)
 
 - https://gophercises.com/
