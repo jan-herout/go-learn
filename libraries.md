@@ -49,6 +49,7 @@ Viz také:
 
 | url                                | comment                                                 |
 | ---------------------------------- | ------------------------------------------------------- |
+| https://github.com/joho/godotenv   | Load environment variables from .env                    |
 | https://github.com/subosito/gotenv | Load environment variables from .env or io.Reader in Go |
 
 ## CLI, prompts
@@ -90,6 +91,12 @@ Viz také:
 | https://github.com/hexops/gotextdiff/     | compare and diff             |
 | https://github.com/asaskevich/govalidator | validátor stringů a struktur |
 
+## YAML, JSON
+
+| url                            | comment                                 |
+| ------------------------------ | --------------------------------------- |
+| https://github.com/ghodss/yaml | (de)serializace do YAML podle JSON tagů |
+
 ## Dev Tools & other
 
 | url                                                | comment                                       |
@@ -100,3 +107,16 @@ Viz také:
 | https://tpaschalis.github.io/delve-debugging/      | jak použít `delve` debugger?                  |
 | https://pkg.go.dev/golang.org/x/tools/cmd/stringer | generátor `fmt.Stringer` interface            |
 | https://github.com/mattn/docx2md                   | `docx` to `md`                                |
+
+## Databases
+
+| url                              | comment                                                                                            |
+| -------------------------------- | -------------------------------------------------------------------------------------------------- |
+| https://github.com/jmoiron/sqlx  | wrapper nad `database/sql`, není to [DBI](https://metacpan.org/pod/DBI), ale zjednodušuje to život |
+| https://github.com/godror/godror | Oracle database driver pro Go                                                                      |
+
+## Git commit hooks
+
+| url                                            | comment                   |
+| ---------------------------------------------- | ------------------------- |
+| https://github.com/TekWizely/pre-commit-golang | commit hooks pro git a Go |
