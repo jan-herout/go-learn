@@ -11,6 +11,7 @@ Tutorial, cheat sheets
 
 Free, online books
 
+- [Practical Go Lessons](https://www.practical-go-lessons.com/)
 - [Go Bootcamp](http://www.golangbootcamp.com/)
 - [Learn Go with Tests](https://quii.gitbook.io/learn-go-with-tests/) - Naprosté základy + TDD
 - [Spaceship Go](https://blasrodri.github.io/spaceship-go-gh-pages/cover.html) - Tak trochu filozofické čtení; nejspíš nevhodné, pokud s Go začínáte - text oceníte až s odstupem.

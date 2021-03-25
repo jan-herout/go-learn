@@ -104,6 +104,7 @@ Viz také:
 | https://taskfile.dev/                              | `task` místo `make` - konfigurace v YAML      |
 | https://github.com/cortesi/modd                    | filesystem watcher                            |
 | https://github.com/wtetsu/gaze                     | jako `modd`, ale jednodušší - bez konfigurace |
+| https://github.com/rsc/go-import-redirector        | redirector pro go get a private repos         |
 | https://tpaschalis.github.io/delve-debugging/      | jak použít `delve` debugger?                  |
 | https://pkg.go.dev/golang.org/x/tools/cmd/stringer | generátor `fmt.Stringer` interface            |
 | https://github.com/mattn/docx2md                   | `docx` to `md`                                |
