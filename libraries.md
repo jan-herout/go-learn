@@ -59,6 +59,7 @@ Viz také:
 | https://github.com/docopt/docopt.go | http://http://docopt.org/                                                                   |
 | https://github.com/spf13/cobra      | subjektivně poměrně složitý postup, jak definovat CLI rozhraní; ale je to de-facto standard |
 | https://github.com/c-bata/go-prompt | autocomplete promts                                                                         |
+| https://github.com/charmbracelet/lipgloss | xpressive, declarative approach to terminal rendering; [windows](https://github.com/charmbracelet/glow/blob/master/console_windows.go) support |
 
 ## Dokumentace
 
